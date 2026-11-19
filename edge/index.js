@@ -22,7 +22,7 @@
 
 const KV_NAMESPACE = 'cpeweb'
 const LEGACY_KV_NAMESPACES = ['cpe_network_dashboard_web']
-const EDGE_BUILD = '2026-11-19.2'
+const EDGE_BUILD = '2026-11-19.3'
 const STATUS_INTERVAL_MS = 5 * 60 * 1000
 const STATUS_IDS = ['website', 'health', 'releases', 'android', 'windows', 'macos']
 const STATUS_PREFIX = 'status_v1'
@@ -33,6 +33,8 @@ const CONFIG_KEY = 'config'
 const BASELINE_KEY = 'statsBaseline'
 const UPDATE_STORE_VERSION = 2
 const MAX_JSON_BYTES = 24 * 1024
+const MAX_STATUS_JSON_BYTES = 1536 * 1024
+const MAX_STATUS_BATCH = 2016
 const MAX_DAILY_EVENTS = 360
 const PUBLIC_DAYS = 7
 const ANALYTICS_READ_CACHE_TTL_MS = 15 * 1000
@@ -1773,10 +1775,10 @@ async function guardAnalyticsRead(request) {
   return null
 }
 
-async function readJsonLimited(request) {
-  const len = Number(request.headers.get('content-length') || '0')
-  if (len > MAX_JSON_BYTES) throw new Error('Request body too large')
-  return request.json()
+async function readJsonLimited(request, maxBytes = MAX_JSON_BYTES) {
+  const body = await request.arrayBuffer()
+  if (body.byteLength > maxBytes) throw new Error('Request body too large')
+  return JSON.parse(new TextDecoder().decode(body))
 }
 
 async function incrementCounter(kv, baseKey, todayKey) {
@@ -3513,15 +3515,15 @@ function normalizeStatusReport(body) {
   }
 }
 
-async function storeStatusReport(kv, report) {
+async function storeStatusReports(kv, reports) {
   const key = STATUS_PREFIX + '_store'
   const now = Date.now()
   const currentSlot = Math.floor(now / STATUS_INTERVAL_MS)
   const state = (await statusRead(kv, key)) || {
     schemaVersion: 1,
-    firstAt: report.at,
-    lastAt: report.at,
-    latest: report,
+    firstAt: null,
+    lastAt: null,
+    latest: null,
     days: {},
     history: [],
     recentSlots: [],
@@ -3529,45 +3531,59 @@ async function storeStatusReport(kv, report) {
   state.days ||= {}
   state.history ||= []
   state.recentSlots = (state.recentSlots || []).filter((slot) => slot >= currentSlot - 2016)
-  if (state.recentSlots.includes(report.slot)) {
-    return { stored: false, duplicate: true, checkedAt: report.at, slot: report.slot }
-  }
-
-  const date = new Date(Date.parse(report.at) + STATUS_DAY_OFFSET_MS).toISOString().slice(0, 10)
-  const daily = state.days[date] || { date, samples: 0, availableSamples: 0, services: {} }
-  daily.services ||= {}
-  daily.samples += 1
-  if (report.services.every((result) => result.state !== 'unavailable')) daily.availableSamples += 1
-  for (const id of STATUS_IDS) {
-    const metric = (daily.services[id] ||= {
-      checks: 0,
-      available: 0,
-      slow: 0,
-      failed: 0,
-      latencyTotal: 0,
-      maxLatency: 0,
-    })
-    const result = report.services.find((item) => item.id === id)
-    if (!result) continue
-    metric.checks += 1
-    if (result.state === 'unavailable') metric.failed += 1
-    else {
-      metric.available += 1
-      if (result.state === 'slow') metric.slow += 1
-      metric.latencyTotal += result.latencyMs
-      metric.maxLatency = Math.max(metric.maxLatency, result.latencyMs)
+  const seenSlots = new Set(state.recentSlots)
+  const accepted = []
+  let stored = 0
+  let duplicates = 0
+  for (const report of [...reports].sort((a, b) => a.slot - b.slot)) {
+    if (seenSlots.has(report.slot)) {
+      duplicates += 1
+      continue
     }
+    seenSlots.add(report.slot)
+    accepted.push(report)
+    const date = new Date(Date.parse(report.at) + STATUS_DAY_OFFSET_MS).toISOString().slice(0, 10)
+    const daily = state.days[date] || { date, samples: 0, availableSamples: 0, services: {} }
+    daily.services ||= {}
+    daily.samples += 1
+    if (report.services.every((result) => result.state !== 'unavailable'))
+      daily.availableSamples += 1
+    for (const id of STATUS_IDS) {
+      const metric = (daily.services[id] ||= {
+        checks: 0,
+        available: 0,
+        slow: 0,
+        failed: 0,
+        latencyTotal: 0,
+        maxLatency: 0,
+      })
+      const result = report.services.find((item) => item.id === id)
+      if (!result) continue
+      metric.checks += 1
+      if (result.state === 'unavailable') metric.failed += 1
+      else {
+        metric.available += 1
+        if (result.state === 'slow') metric.slow += 1
+        metric.latencyTotal += result.latencyMs
+        metric.maxLatency = Math.max(metric.maxLatency, result.latencyMs)
+      }
+    }
+    state.days[date] = daily
+    state.firstAt = !state.firstAt || report.at < state.firstAt ? report.at : state.firstAt
+    if (!state.lastAt || report.at >= state.lastAt) {
+      state.lastAt = report.at
+      state.latest = report
+    }
+    stored += 1
   }
-  state.days[date] = daily
-  state.firstAt = !state.firstAt || report.at < state.firstAt ? report.at : state.firstAt
-  if (!state.lastAt || report.at >= state.lastAt) {
-    state.lastAt = report.at
-    state.latest = report
+  if (!stored) {
+    const last = reports[reports.length - 1]
+    return { stored: 0, duplicates, duplicate: true, checkedAt: last.at, slot: last.slot }
   }
   state.history = state.history.filter((sample) => Date.parse(sample.at) >= now - 86400_000)
-  state.history.push(report)
+  state.history.push(...accepted.filter((sample) => Date.parse(sample.at) >= now - 86400_000))
   state.history.sort((a, b) => a.slot - b.slot)
-  state.recentSlots.push(report.slot)
+  state.recentSlots = [...seenSlots]
 
   const oldestDate = new Date(now + STATUS_DAY_OFFSET_MS - 100 * 86400_000)
     .toISOString()
@@ -3578,7 +3594,8 @@ async function storeStatusReport(kv, report) {
   // A single atomic KV value keeps ingestion and reads within a small operation budget.
   await kvPutText(kv, key, JSON.stringify(state))
   runtimeState().statusCache = null
-  return { stored: true, duplicate: false, checkedAt: report.at, slot: report.slot }
+  const last = reports[reports.length - 1]
+  return { stored, duplicates, duplicate: stored === 0, checkedAt: last.at, slot: last.slot }
 }
 
 async function handleStatusIngest(request) {
@@ -3589,15 +3606,22 @@ async function handleStatusIngest(request) {
       return json({ ok: false, error: 'Access denied' }, 403)
     const blocked = await guardReadRequest(request, 'status-write', 80, 3600)
     if (blocked) return blocked
-    let report
+    let reports
     try {
-      report = normalizeStatusReport(await readJsonLimited(request))
+      const body = await readJsonLimited(request, MAX_STATUS_JSON_BYTES)
+      if (Array.isArray(body?.reports)) {
+        if (!body.reports.length || body.reports.length > MAX_STATUS_BATCH)
+          throw new Error('Status batch must contain 1 to 2016 reports')
+        reports = body.reports.map(normalizeStatusReport)
+      } else {
+        reports = [normalizeStatusReport(body)]
+      }
     } catch (error) {
       return json({ ok: false, error: error.message }, 400)
     }
     const runtime = runtimeState()
     const previous = runtime.statusQueue || Promise.resolve()
-    const queued = previous.catch(() => {}).then(() => storeStatusReport(edgeKv(), report))
+    const queued = previous.catch(() => {}).then(() => storeStatusReports(edgeKv(), reports))
     runtime.statusQueue = queued.catch(() => {})
     return json({ ok: true, ...(await queued) })
   } catch {

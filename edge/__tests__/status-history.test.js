@@ -43,6 +43,15 @@ async function ingest(data, token = 'monitor-test-token') {
     })
   )
 }
+async function ingestBatch(reports, token = 'monitor-test-token') {
+  return edge.fetch(
+    new Request('https://cpe.yuan6.cn/api/status/ingest', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reports }),
+    })
+  )
+}
 async function summary(days = 30) {
   const response = await edge.fetch(
     new Request('https://cpe.yuan6.cn/api/status/summary?days=' + days)
@@ -93,6 +102,19 @@ describe('durable status history', () => {
     expect(result.totals.samples).toBe(1)
     expect(result.latest.at).toBe(new Date(observation.at).toISOString())
     expect(result.latest.services.find((service) => service.id === 'android').version).toBe('3.7.1')
+  })
+  it('stores a backfill batch in one write without overwriting earlier reports', async () => {
+    const observations = [report('2026-11-19T10:00:00Z'), report('2026-11-19T10:05:00Z', true)]
+    expect((await ingestBatch(observations)).status).toBe(200)
+    expect([...store.keys()].filter((key) => key.startsWith('status_v1_'))).toEqual([
+      'status_v1_store',
+    ])
+    const result = await summary()
+    expect(result.history).toHaveLength(2)
+    expect(result.totals.samples).toBe(2)
+    expect(result.services.android.availability).toBe(50)
+    expect((await (await ingestBatch(observations)).json()).duplicates).toBe(2)
+    expect((await summary()).totals.samples).toBe(2)
   })
   it('retains failures, excludes missing periods from availability and reports coverage', async () => {
     await ingest(report('2026-11-19T10:00:00Z'))

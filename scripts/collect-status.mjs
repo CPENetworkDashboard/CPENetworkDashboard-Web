@@ -45,41 +45,61 @@ async function main() {
   pending.push(report)
   await persistQueue(path, pending)
   const cutoff = Date.now() - 7 * 86400_000
-  if (pending.some((entry) => Date.parse(entry.at) < cutoff)) {
-    console.error(
-      'Some pending measurements are older than the 7-day replay window; retained locally for manual recovery.'
-    )
-  }
-  const failed = []
-  for (let index = 0; index < pending.length; index += 1) {
-    const entry = pending[index]
-    if (Date.parse(entry.at) < cutoff) {
-      failed.push(entry)
-      continue
-    }
+  const expired = pending.filter((entry) => Date.parse(entry.at) < cutoff)
+  const deliverable = pending.filter((entry) => Date.parse(entry.at) >= cutoff)
+  let storedCount = 0
+  let duplicateCount = 0
+  if (deliverable.length) {
     try {
       const response = await fetch(new URL('/api/status/ingest', origin), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify(entry),
-        signal: AbortSignal.timeout(20_000),
+        body: JSON.stringify({
+          reports: deliverable.map((entry) => ({
+            at: entry.at,
+            services: entry.services.map(
+              ({ id, state, latencyMs, httpStatus, version, build }) => ({
+                id,
+                state,
+                latencyMs,
+                httpStatus,
+                ...(version ? { version } : {}),
+                ...(build ? { build } : {}),
+              })
+            ),
+          })),
+        }),
+        signal: AbortSignal.timeout(30_000),
         redirect: 'error',
       })
       if (!response.ok) throw new Error('Status ingest returned HTTP ' + response.status)
       const result = await response.json()
-      if (result.ok !== true) throw new Error('Status ingest did not acknowledge the report')
+      if (result.ok !== true) throw new Error('Status ingest did not acknowledge the reports')
+      storedCount = Number(result.stored) || 0
+      duplicateCount = Number(result.duplicates) || 0
     } catch (error) {
-      failed.push(...pending.slice(index))
-      await persistQueue(path, failed)
+      await persistQueue(path, pending)
       // Do not print request headers, tokens, or raw upstream response bodies.
-      throw new Error('Upload incomplete; ' + failed.length + ' reports retained. ' + error.message)
+      throw new Error(
+        'Upload incomplete; ' + pending.length + ' reports retained. ' + error.message
+      )
     }
   }
-  await persistQueue(path, failed)
+  await persistQueue(path, expired)
+  if (expired.length) {
+    console.error(
+      expired.length +
+        ' reports are older than the 7-day replay window; retained locally for manual recovery.'
+    )
+    process.exitCode = 1
+  }
   console.log(
-    'Stored ' + (pending.length - failed.length) + ' report(s) in the existing KV namespace.'
+    'Stored ' +
+      storedCount +
+      ' report(s); ignored ' +
+      duplicateCount +
+      ' duplicate(s) in the existing KV namespace.'
   )
-  if (failed.length) process.exitCode = 1
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
