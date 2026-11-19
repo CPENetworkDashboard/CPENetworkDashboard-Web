@@ -22,7 +22,7 @@
 
 const KV_NAMESPACE = 'cpeweb'
 const LEGACY_KV_NAMESPACES = ['cpe_network_dashboard_web']
-const EDGE_BUILD = '2026-11-19.1'
+const EDGE_BUILD = '2026-11-19.2'
 const STATUS_INTERVAL_MS = 5 * 60 * 1000
 const STATUS_IDS = ['website', 'health', 'releases', 'android', 'windows', 'macos']
 const STATUS_PREFIX = 'status_v1'
