@@ -38,7 +38,7 @@ export interface StatusDay {
 }
 export interface StoredStatusSummary {
   ok: true
-  source: 'edge-kv'
+  source: 'scheduled-monitor'
   schemaVersion: number
   intervalSeconds: number
   timeZone: string

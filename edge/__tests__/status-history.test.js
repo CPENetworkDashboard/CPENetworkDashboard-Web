@@ -69,9 +69,21 @@ describe('durable status history', () => {
     expect((await ingest({ at: '2026-11-19T10:00:00Z', services: [] })).status).toBe(400)
     expect([...store.keys()].filter((key) => key.startsWith('status_'))).toHaveLength(0)
   })
+  it('serves an explicit empty history before the first scheduled report', async () => {
+    const result = await summary()
+    expect(result).toMatchObject({
+      source: 'scheduled-monitor',
+      latest: null,
+      totals: { samples: 0, availability: null },
+    })
+    expect(result.daily).toHaveLength(30)
+  })
   it('persists across a fresh runtime and deduplicates retried slots', async () => {
     const observation = report('2026-11-19T10:00:00Z')
     expect((await ingest(observation)).status).toBe(200)
+    expect([...store.keys()].filter((key) => key.startsWith('status_v1_'))).toEqual([
+      'status_v1_store',
+    ])
     expect((await (await ingest(observation)).json()).duplicate).toBe(true)
     delete globalThis.__CPE_PLUS_PLUS_EDGE_RUNTIME__
     edge = loadEdge()
@@ -98,11 +110,11 @@ describe('durable status history', () => {
     await ingest(report('2026-11-18T18:00:00Z'))
     const result = await summary()
     expect(result.daily.at(-1).samples).toBe(1)
-    expect(store.has('status_v1_day__2026-11-19')).toBe(true)
+    expect(JSON.parse(store.get('status_v1_store')).days['2026-11-19'].samples).toBe(1)
     expect(result.stale).toBe(true)
   })
-  it('repairs interrupted writes from canonical samples on retry', async () => {
-    rejectPut = 'status_v1_day__2026-11-19'
+  it('retains a report after a failed atomic write and accepts the retry', async () => {
+    rejectPut = 'status_v1_store'
     const observation = report('2026-11-19T10:00:00Z')
     expect((await ingest(observation)).status).toBe(503)
     expect((await ingest(observation)).status).toBe(200)

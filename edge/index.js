@@ -3369,7 +3369,7 @@ async function handleAnalyticsBaseline(request) {
 }
 
 // Status measurements are written only by the authenticated external collector.
-// Hour buckets retain individual samples; daily summaries remain small as history grows.
+// Daily aggregates and one day of raw samples share a bounded KV snapshot.
 async function statusRead(kv, key) {
   const text = await kv.get(key, { type: 'text' })
   if (text === null || text === undefined || text === '') return null
@@ -3514,65 +3514,71 @@ function normalizeStatusReport(body) {
 }
 
 async function storeStatusReport(kv, report) {
-  const sampleKey = STATUS_PREFIX + '_sample__' + report.slot
-  const stored = await statusRead(kv, sampleKey)
-  const sample = stored || report
-  if (!stored) await kvPutText(kv, sampleKey, JSON.stringify(report))
-  // Deterministic slot keys are canonical. Rebuild current and previous hour so
-  // eventual replication or a retried partial write cannot lose a measurement.
-  const rebuilt = new Map()
-  for (const hourStart of [
-    Math.floor(report.slot / 12) * 12 - 12,
-    Math.floor(report.slot / 12) * 12,
-  ]) {
-    const records = await Promise.all(
-      Array.from({ length: 12 }, (_, index) => {
-        const slot = hourStart + index
-        return slot === report.slot ? sample : statusRead(kv, STATUS_PREFIX + '_sample__' + slot)
-      })
-    )
-    const samples = records.filter(Boolean).sort((a, b) => a.slot - b.slot)
-    if (!samples.length) continue
-    const hour = new Date(hourStart * STATUS_INTERVAL_MS).toISOString().slice(0, 13)
-    const date = new Date(hourStart * STATUS_INTERVAL_MS + STATUS_DAY_OFFSET_MS)
-      .toISOString()
-      .slice(0, 10)
-    const bucket = { schemaVersion: 1, hour, date, samples }
-    await kvPutText(kv, STATUS_PREFIX + '_hour__' + hour, JSON.stringify(bucket))
-    rebuilt.set(hour, bucket)
-  }
-  const dates = [...new Set([...rebuilt.values()].map((bucket) => bucket.date))]
-  for (const date of dates) {
-    const midnight = Date.parse(date + 'T00:00:00+08:00')
-    const hourNames = Array.from({ length: 24 }, (_, index) =>
-      new Date(midnight + index * 3600_000).toISOString().slice(0, 13)
-    )
-    const buckets = await Promise.all(
-      hourNames.map((hour) => rebuilt.get(hour) || statusRead(kv, STATUS_PREFIX + '_hour__' + hour))
-    )
-    const daily = statusAggregate(buckets.flatMap((bucket) => bucket?.samples || []))
-    const observed = buckets.flatMap((bucket) => bucket?.samples || [])
-    daily.firstAt = observed[0]?.at || sample.at
-    await kvPutText(
-      kv,
-      STATUS_PREFIX + '_day__' + date,
-      JSON.stringify({ schemaVersion: 1, date, ...daily })
-    )
-  }
-  const meta = (await statusRead(kv, STATUS_PREFIX + '_meta')) || {
+  const key = STATUS_PREFIX + '_store'
+  const now = Date.now()
+  const currentSlot = Math.floor(now / STATUS_INTERVAL_MS)
+  const state = (await statusRead(kv, key)) || {
     schemaVersion: 1,
-    firstAt: sample.at,
-    lastAt: sample.at,
-    latest: sample,
+    firstAt: report.at,
+    lastAt: report.at,
+    latest: report,
+    days: {},
+    history: [],
+    recentSlots: [],
   }
-  meta.firstAt = meta.firstAt < sample.at ? meta.firstAt : sample.at
-  if (sample.at >= meta.lastAt) {
-    meta.lastAt = sample.at
-    meta.latest = sample
+  state.days ||= {}
+  state.history ||= []
+  state.recentSlots = (state.recentSlots || []).filter((slot) => slot >= currentSlot - 2016)
+  if (state.recentSlots.includes(report.slot)) {
+    return { stored: false, duplicate: true, checkedAt: report.at, slot: report.slot }
   }
-  await kvPutText(kv, STATUS_PREFIX + '_meta', JSON.stringify(meta))
+
+  const date = new Date(Date.parse(report.at) + STATUS_DAY_OFFSET_MS).toISOString().slice(0, 10)
+  const daily = state.days[date] || { date, samples: 0, availableSamples: 0, services: {} }
+  daily.services ||= {}
+  daily.samples += 1
+  if (report.services.every((result) => result.state !== 'unavailable')) daily.availableSamples += 1
+  for (const id of STATUS_IDS) {
+    const metric = (daily.services[id] ||= {
+      checks: 0,
+      available: 0,
+      slow: 0,
+      failed: 0,
+      latencyTotal: 0,
+      maxLatency: 0,
+    })
+    const result = report.services.find((item) => item.id === id)
+    if (!result) continue
+    metric.checks += 1
+    if (result.state === 'unavailable') metric.failed += 1
+    else {
+      metric.available += 1
+      if (result.state === 'slow') metric.slow += 1
+      metric.latencyTotal += result.latencyMs
+      metric.maxLatency = Math.max(metric.maxLatency, result.latencyMs)
+    }
+  }
+  state.days[date] = daily
+  state.firstAt = !state.firstAt || report.at < state.firstAt ? report.at : state.firstAt
+  if (!state.lastAt || report.at >= state.lastAt) {
+    state.lastAt = report.at
+    state.latest = report
+  }
+  state.history = state.history.filter((sample) => Date.parse(sample.at) >= now - 86400_000)
+  state.history.push(report)
+  state.history.sort((a, b) => a.slot - b.slot)
+  state.recentSlots.push(report.slot)
+
+  const oldestDate = new Date(now + STATUS_DAY_OFFSET_MS - 100 * 86400_000)
+    .toISOString()
+    .slice(0, 10)
+  for (const storedDate of Object.keys(state.days))
+    if (storedDate < oldestDate) delete state.days[storedDate]
+
+  // A single atomic KV value keeps ingestion and reads within a small operation budget.
+  await kvPutText(kv, key, JSON.stringify(state))
   runtimeState().statusCache = null
-  return { stored: !stored, duplicate: Boolean(stored), checkedAt: sample.at, slot: sample.slot }
+  return { stored: true, duplicate: false, checkedAt: report.at, slot: report.slot }
 }
 
 async function handleStatusIngest(request) {
@@ -3604,22 +3610,19 @@ async function readStatusSummary(kv, days) {
   const currentSlot = Math.floor(now / STATUS_INTERVAL_MS)
   const today = new Date(now + STATUS_DAY_OFFSET_MS).toISOString().slice(0, 10)
   const midnight = Date.parse(today + 'T00:00:00+08:00')
-  const meta = await statusRead(kv, STATUS_PREFIX + '_meta')
+  const state = (await statusRead(kv, STATUS_PREFIX + '_store')) || {
+    days: {},
+    history: [],
+    latest: null,
+    firstAt: null,
+  }
   const dates = Array.from({ length: days }, (_, index) =>
     new Date(midnight + STATUS_DAY_OFFSET_MS - (days - index - 1) * 86400_000)
       .toISOString()
       .slice(0, 10)
   )
-  const storedDays = []
-  // Limit parallel KV reads so a longer history does not create an unbounded burst.
-  for (let index = 0; index < dates.length; index += 6)
-    storedDays.push(
-      ...(await Promise.all(
-        dates.slice(index, index + 6).map((date) => statusRead(kv, STATUS_PREFIX + '_day__' + date))
-      ))
-    )
-  const firstAt =
-    [meta?.firstAt, ...storedDays.map((day) => day?.firstAt)].filter(Boolean).sort()[0] || null
+  const storedDays = dates.map((date) => state.days?.[date] || statusAggregate([]))
+  const firstAt = state.firstAt || null
   const firstSlot = firstAt ? Math.floor(Date.parse(firstAt) / STATUS_INTERVAL_MS) : null
   const daily = dates.map((date, index) => {
     const metrics = storedDays[index] || statusAggregate([])
@@ -3651,27 +3654,10 @@ async function readStatusSummary(kv, days) {
     }),
     { checks: 0, available: 0, failed: 0, latencyTotal: 0 }
   )
-  const hours = Array.from({ length: 25 }, (_, index) =>
-    new Date(now - (24 - index) * 3600_000).toISOString().slice(0, 13)
-  )
-  const buckets = []
-  for (let index = 0; index < hours.length; index += 6)
-    buckets.push(
-      ...(await Promise.all(
-        hours
-          .slice(index, index + 6)
-          .map((hour) => statusRead(kv, STATUS_PREFIX + '_hour__' + hour))
-      ))
-    )
-  const history = buckets
-    .flatMap((bucket) => bucket?.samples || [])
+  const history = (state.history || [])
     .filter((sample) => Date.parse(sample.at) >= now - 86400_000)
     .sort((a, b) => a.slot - b.slot)
-  const latest =
-    [meta?.latest, history[history.length - 1]]
-      .filter(Boolean)
-      .sort((a, b) => a.slot - b.slot)
-      .pop() || null
+  const latest = state.latest || history[history.length - 1] || null
   return {
     ok: true,
     schemaVersion: 1,
