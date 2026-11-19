@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import DownloadActions from '@/components/DownloadActions.vue'
 import { downloads } from '@/content'
 import { useAnalytics } from '@/composables/useAnalytics'
@@ -23,7 +24,16 @@ const {
   copyChecksum,
 } = useDownloads()
 
-onMounted(initDownloadRecommendation)
+const route = useRoute()
+function applyRequestedDownload() {
+  const id = route.query.file
+  if (typeof id === 'string' && downloads.some((download) => download.id === id)) selectDownload(id)
+}
+onMounted(() => {
+  initDownloadRecommendation()
+  applyRequestedDownload()
+})
+watch(() => route.query.file, applyRequestedDownload)
 
 const versionRows = computed(() => {
   return Object.values(downloadVersionTotals.value || {})
@@ -60,6 +70,7 @@ const versionRows = computed(() => {
             :key="download.id"
             type="button"
             :class="{ active: recommendedDownload.id === download.id }"
+            :aria-pressed="recommendedDownload.id === download.id"
             @click="selectDownload(download.id)"
           >
             {{ download.platform }}
@@ -114,7 +125,7 @@ const versionRows = computed(() => {
         <span>总下载量</span>
         <strong>{{ valueOrPreview(totalDownloads) }}</strong>
       </div>
-      <div class="download-summary-card" v-for="row in versionRows" :key="row.label">
+      <div v-for="row in versionRows" :key="row.label" class="download-summary-card">
         <span>{{ row.label }}</span>
         <strong>{{ statForVersion(row.platform, row.version) }}</strong>
       </div>
@@ -142,5 +153,8 @@ const versionRows = computed(() => {
         />
       </article>
     </div>
+    <p class="download-service-note">
+      更新检查是否正常？<RouterLink to="/status">查看服务状态</RouterLink>
+    </p>
   </section>
 </template>

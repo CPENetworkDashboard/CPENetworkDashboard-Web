@@ -15,23 +15,24 @@ export const routes: Route[] = [
   { path: '/product', label: '产品', title: '产品介绍' },
   { path: '/download', label: '下载', title: '下载 CPE加加' },
   { path: '/changelog', label: '更新日志', title: '更新日志' },
+  { path: '/status', label: '服务状态', title: '服务状态' },
   { path: '/about', label: '关于', title: '关于 CPE加加' },
 ]
 
-export const heroDesktopImage = '/media/computer/desktop-signal-dashboard.png'
+export const heroDesktopImage = '/media/computer/desktop-signal-dashboard.webp'
 
 export const desktopScreenItems: Array<{
   image: string
   label: string
   tone: 'light' | 'dark'
 }> = [
-  { image: '/media/computer/desktop-signal-dashboard.png', label: '信号质量监控', tone: 'dark' },
-  { image: '/media/computer/desktop-frequency-lock.png', label: '频段锁定管理', tone: 'light' },
-  { image: '/media/computer/desktop-speed-test.png', label: '测速页面', tone: 'light' },
-  { image: '/media/computer/desktop-ping-test.png', label: 'Ping 测试', tone: 'light' },
-  { image: '/media/computer/desktop-route-test.png', label: '路由追踪', tone: 'light' },
-  { image: '/media/computer/desktop-display-settings.png', label: '显示设置', tone: 'light' },
-  { image: '/media/computer/desktop-login-config.png', label: '登录配置', tone: 'light' },
+  { image: '/media/computer/desktop-signal-dashboard.webp', label: '信号质量监控', tone: 'dark' },
+  { image: '/media/computer/desktop-frequency-lock.webp', label: '频段锁定管理', tone: 'light' },
+  { image: '/media/computer/desktop-speed-test.webp', label: '测速页面', tone: 'light' },
+  { image: '/media/computer/desktop-ping-test.webp', label: 'Ping 测试', tone: 'light' },
+  { image: '/media/computer/desktop-route-test.webp', label: '路由追踪', tone: 'light' },
+  { image: '/media/computer/desktop-display-settings.webp', label: '显示设置', tone: 'light' },
+  { image: '/media/computer/desktop-login-config.webp', label: '登录配置', tone: 'light' },
 ]
 
 export const mobileScreenItems: Array<{
@@ -39,18 +40,26 @@ export const mobileScreenItems: Array<{
   label: string
   tone: 'light' | 'dark'
 }> = [
-  { image: '/media/phone/mobile-status-dashboard-dark.jpg', label: '状态看板', tone: 'dark' },
-  { image: '/media/phone/mobile-lock-arfcn.jpg', label: '锁 ARFCN', tone: 'dark' },
-  { image: '/media/phone/mobile-band-selection.jpg', label: '频段选择', tone: 'dark' },
-  { image: '/media/phone/mobile-network-preference.jpg', label: '网络首选', tone: 'dark' },
-  { image: '/media/phone/mobile-lock-pci.jpg', label: '锁 PCI', tone: 'dark' },
-  { image: '/media/phone/mobile-device-neighbor-cells.jpg', label: '设备信息与邻区', tone: 'dark' },
-  { image: '/media/phone/mobile-ping-test.jpg', label: 'Ping 测试', tone: 'dark' },
-  { image: '/media/phone/mobile-speed-test.jpg', label: '测速页面', tone: 'dark' },
-  { image: '/media/phone/mobile-route-test.jpg', label: '路由追踪', tone: 'dark' },
-  { image: '/media/phone/mobile-display-settings.jpg', label: '显示设置', tone: 'dark' },
-  { image: '/media/phone/mobile-device-settings.jpg', label: '设备设置', tone: 'dark' },
-  { image: '/media/phone/mobile-status-dashboard-light.jpg', label: '浅色状态看板', tone: 'light' },
+  { image: '/media/phone/mobile-status-dashboard-dark.webp', label: '状态看板', tone: 'dark' },
+  { image: '/media/phone/mobile-lock-arfcn.webp', label: '锁 ARFCN', tone: 'dark' },
+  { image: '/media/phone/mobile-band-selection.webp', label: '频段选择', tone: 'dark' },
+  { image: '/media/phone/mobile-network-preference.webp', label: '网络首选', tone: 'dark' },
+  { image: '/media/phone/mobile-lock-pci.webp', label: '锁 PCI', tone: 'dark' },
+  {
+    image: '/media/phone/mobile-device-neighbor-cells.webp',
+    label: '设备信息与邻区',
+    tone: 'dark',
+  },
+  { image: '/media/phone/mobile-ping-test.webp', label: 'Ping 测试', tone: 'dark' },
+  { image: '/media/phone/mobile-speed-test.webp', label: '测速页面', tone: 'dark' },
+  { image: '/media/phone/mobile-route-test.webp', label: '路由追踪', tone: 'dark' },
+  { image: '/media/phone/mobile-display-settings.webp', label: '显示设置', tone: 'dark' },
+  { image: '/media/phone/mobile-device-settings.webp', label: '设备设置', tone: 'dark' },
+  {
+    image: '/media/phone/mobile-status-dashboard-light.webp',
+    label: '浅色状态看板',
+    tone: 'light',
+  },
 ]
 
 export const desktopScreens = desktopScreenItems.map((item) => item.image)

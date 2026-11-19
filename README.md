@@ -23,17 +23,18 @@ ESA 静态构建产物单文件限制为 25MB。当前发布方式是：
 
 | 页面     | 路径          | 内容                                                                                       |
 | -------- | ------------- | ------------------------------------------------------------------------------------------ |
-| 首页     | `#/`          | 应用图标、核心产品表达、电脑/手机界面动效和指标滚动条                                      |
+| 首页     | `#/`          | 真实产品界面、可切换的诊断功能、设备覆盖与平台下载                                         |
 | 产品介绍 | `#/product`   | 排障流程、电脑端截图、手机端截图、平台说明和设备覆盖                                       |
 | 下载     | `#/download`  | 自动识别当前设备并推荐 Android APK、macOS DMG 或 Windows EXE，保留 Portable / MSI 手动选择 |
-| 更新日志 | `#/changelog` | 展开 Android 3.7.1、3.7.0、3.6.5、3.5.3、3.5.2、Android 3.5 旧版、Desktop 3.0.0 等更新记录        |
+| 更新日志 | `#/changelog` | 展开 Android 3.7.1、3.7.0、3.6.5、3.5.3、3.5.2、Android 3.5 旧版、Desktop 3.0.0 等更新记录 |
+| 服务状态 | `#/status`    | 持久化服务状态、30/90 天可用率、每日记录、历史响应曲线与 JSON 导出                         |
 | 关于     | `#/about`     | 软件名、版本、QQ群、开发者、赞助入口和完整致谢名单                                         |
 
 ## 当前公开下载
 
 | 文件                                                   | 平台            | 版本  | 大小      |
 | ------------------------------------------------------ | --------------- | ----- | --------- |
-| `CPENetworkDashboard V3.7.1.apk`               | Android         | 3.7.1 | 30.3 MiB  |
+| `CPENetworkDashboard V3.7.1.apk`                       | Android         | 3.7.1 | 30.3 MiB  |
 | `CPENetworkDashboard V3.6.5.apk`                       | Android（旧版） | 3.6.5 | 16.1 MiB  |
 | `CPEPlusPlus-3.5.3-macos-arm64.dmg`                    | macOS arm64     | 3.5.3 | 128.3 MiB |
 | `CPEPlusPlus-3.5.3-protected-portable-windows-x64.zip` | Windows x64     | 3.5.3 | 119.6 MiB |
@@ -58,6 +59,16 @@ npm run build
 ```
 
 构建产物在 `dist/`。`public/downloads` 中只保留 APK、校验文件和不超过 25MB 的分片文件，适合直接上传到 ESA 静态资源托管。
+
+开发服务器将 /api/status/\* 交给本地持久化适配器，其余 /api 请求代理到现有官网。生产构建使用同域 /api 与现有 ESA EdgeKV。
+
+### 服务状态与设计说明
+
+状态页展示独立定时任务保存在现有 cpeweb KV 中的监测记录，包含官网、边缘服务、版本列表及三平台更新检查。支持 30/90 天统计、每日可用性、采集覆盖率、最近 24 小时响应曲线、异常记录和 JSON 导出。页面关闭不影响历史保存或采集。
+
+新增公开读取接口 GET /api/status/summary 和受独立令牌保护的写入接口 POST /api/status/ingest。采集工作流每 5 分钟运行，需部署新版边缘函数并配置 GitHub Actions secret CPE_STATUS_TOKEN。具体步骤及 KV 数据结构见 [STATUS-OPERATIONS.md](STATUS-OPERATIONS.md)。
+
+新版设计参考、使用的外部 skills 和视觉取舍记录在 [DESIGN.md](DESIGN.md)。桌面与手机截图新增 WebP 展示版本，原始 PNG / JPG 仅在放大时加载。
 
 ## ESA Edge Function
 

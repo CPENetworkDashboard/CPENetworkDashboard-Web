@@ -1,162 +1,77 @@
 <script setup lang="ts">
-import ScrollImageSwitcher from '@/components/ScrollImageSwitcher.vue'
-import {
-  desktopScreenLabels,
-  desktopScreens,
-  desktopScreenTones,
-  mobileScreenLabels,
-  mobileScreenTones,
-  mobileScreens,
-  platformCards,
-  productMoments,
-  supportedDevices,
-} from '@/content'
-
-const desktopFeatures = [
-  ['01', '连接看板', '小区、射频、功率和链路状态集中呈现。'],
-  ['02', '锁定回读', '锁频、锁 ARFCN 和锁 PCI 都按结果验证。'],
-  ['03', '链路测试', '测速、Ping、路由测试分开看，不混在一起。'],
-]
-
-const mobileFeatures = [
-  ['01', '现场查看', '站在设备旁边也能看清关键指标。'],
-  ['02', '快速锁定', '频段、ARFCN、PCI 的入口更短。'],
-  ['03', '随手验证', '测完马上知道刚才的调整有没有效果。'],
-]
+import { computed, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import ProductExplorer from '@/components/ProductExplorer.vue'
+import SiteIcon from '@/components/SiteIcon.vue'
+import { supportedDevices } from '@/content'
+const search = ref('')
+const filteredDevices = computed(() =>
+  supportedDevices.filter((row) =>
+    row.join(' ').toLowerCase().includes(search.value.trim().toLowerCase())
+  )
+)
 </script>
 
 <template>
-  <section class="page-view product-page">
-    <header class="page-heading">
-      <p>产品介绍</p>
-      <h1>
-        <span>先看清楚，</span>
-        <span>再动手，</span>
-        <span>再验证。</span>
-      </h1>
-      <span>
-        面向 4G/5G CPE
-        的日常排障、现场调试和设备巡检。我们把原本分散在后台里的信息，整理成调试时真的会用到的顺序。
-      </span>
+  <section class="page-view product-experience content-width">
+    <header class="experience-heading">
+      <p>产品功能</p>
+      <h1>面向 CPE 的<br />网络管理与诊断。</h1>
+      <span
+        >集成网络状态监测、频段管理与链路测试。<br />为桌面排障与移动巡检提供统一的操作流程。</span
+      >
     </header>
-
-    <div class="flow-grid">
-      <article v-for="(moment, index) in productMoments" :key="moment.title" class="flow-item">
-        <span>{{ String(index + 1).padStart(2, '0') }} / {{ moment.label }}</span>
-        <h2>{{ moment.title }}</h2>
-        <p>{{ moment.copy }}</p>
+    <section class="product-story" aria-labelledby="desktop-title">
+      <div class="landing-section-heading">
         <div>
-          <small v-for="point in moment.points" :key="point">{{ point }}</small>
+          <p>macOS / Windows</p>
+          <h2 id="desktop-title">桌面端网络管理</h2>
         </div>
-      </article>
-    </div>
-
-    <section
-      class="showcase-section showcase-pin desktop-showcase"
-      data-scroll-sequence
-      :style="{ '--showcase-steps': desktopScreens.length }"
-    >
-      <div class="showcase-pin-stage">
-        <div class="section-copy">
-          <p>电脑端</p>
-          <h2>坐下来排查，信息要铺开。</h2>
-          <span
-            >横向界面适合长时间看连接状态、锁定回读、测速和日志，不用在几个后台之间来回切。</span
-          >
-          <div class="feature-list">
-            <div v-for="[index, title, copy] in desktopFeatures" :key="title" class="feature-item">
-              <span class="feature-index">{{ index }}</span>
-              <div>
-                <strong>{{ title }}</strong>
-                <p>{{ copy }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="showcase-image-area">
-          <div class="desktop-window glass-card">
-            <div class="window-bar">
-              <span></span>
-              <span></span>
-              <span></span>
-              <strong>CPE++ / macOS / Windows</strong>
-            </div>
-            <div class="desktop-screen-frame">
-              <ScrollImageSwitcher
-                :images="desktopScreens"
-                :labels="desktopScreenLabels"
-                :image-tones="desktopScreenTones"
-                alt="CPE加加电脑端截图"
-              />
-            </div>
-          </div>
-        </div>
+        <p>连接看板、锁定回读、链路测试。<br />选择下方功能，查看实际应用界面。</p>
       </div>
+      <ProductExplorer />
     </section>
-
-    <section
-      class="showcase-section showcase-pin mobile-showcase"
-      data-scroll-sequence
-      :style="{ '--showcase-steps': mobileScreens.length }"
-    >
-      <div class="showcase-pin-stage">
-        <div class="showcase-image-area mobile-image-area">
-          <div class="phone-shell phone-main glass-card">
-            <ScrollImageSwitcher
-              :images="mobileScreens"
-              :labels="mobileScreenLabels"
-              :image-tones="mobileScreenTones"
-              alt="CPE加加 Android 手机截图"
-            />
-          </div>
+    <section id="mobile" class="product-story" aria-labelledby="mobile-title">
+      <div class="landing-section-heading">
+        <div>
+          <p>Android</p>
+          <h2 id="mobile-title">Android 现场调试</h2>
         </div>
-        <div class="section-copy">
-          <p>手机端</p>
-          <h2>在设备旁边，手机更专业。</h2>
-          <span>弱电箱、窗边、机柜旁边，拿起手机看状态和改锁定更方便。</span>
-          <div class="feature-list">
-            <div v-for="[index, title, copy] in mobileFeatures" :key="title" class="feature-item">
-              <span class="feature-index">{{ index }}</span>
-              <div>
-                <strong>{{ title }}</strong>
-                <p>{{ copy }}</p>
-              </div>
-            </div>
-          </div>
+        <p>在移动端查看连接状态、配置频段，<br />并完成现场网络测试。</p>
+      </div>
+      <ProductExplorer mobile />
+    </section>
+    <section id="devices" class="device-directory" aria-labelledby="devices-title">
+      <div class="landing-section-heading">
+        <div>
+          <h2 id="devices-title">设备兼容性</h2>
+          <p>按设备族分别适配。具体能力取决于机型和固件。</p>
         </div>
+        <label class="device-search"
+          ><SiteIcon name="search" :size="18" /><span class="sr-only">搜索厂商或设备型号</span
+          ><input
+            v-model="search"
+            type="search"
+            name="device-search"
+            placeholder="搜索厂商或型号…"
+            autocomplete="off"
+        /></label>
       </div>
-    </section>
-
-    <section class="platform-section">
-      <div class="section-copy">
-        <p>平台</p>
-        <h2>不同场景，用不同版本。</h2>
-      </div>
-      <div class="platform-list">
-        <article
-          v-for="platform in platformCards"
-          :key="platform.name"
-          class="platform-row glass-card"
-        >
-          <span>{{ platform.name }} / {{ platform.version }}</span>
-          <h3>{{ platform.title }}</h3>
-          <p>{{ platform.copy }}</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="device-section">
-      <div class="section-copy">
-        <p>设备覆盖</p>
-        <h2>按设备族分别适配。</h2>
-        <span>华为、烽火通信、鲲鹏无限会按各自接口处理；当前中兴通讯覆盖 G5 Pro / U60 Pro。</span>
-      </div>
-      <div class="device-table glass-card">
-        <div v-for="[brand, models] in supportedDevices" :key="brand" class="device-row">
+      <div class="device-directory-table">
+        <div v-for="[brand, models] in filteredDevices" :key="brand">
           <strong>{{ brand }}</strong>
-          <span>{{ models }}</span>
+          <p>{{ models }}</p>
         </div>
+        <p v-if="!filteredDevices.length" class="device-no-results" role="status">
+          没有找到匹配机型。试试厂商名称，或到关于页面联系开发者。
+        </p>
       </div>
+    </section>
+    <section class="product-endnote">
+      <h2>下载 CPE加加，开始设备管理。</h2>
+      <RouterLink class="action primary" to="/download"
+        ><SiteIcon name="download" :size="18" />下载 CPE加加</RouterLink
+      >
     </section>
   </section>
 </template>

@@ -1,2 +1,4 @@
 @import 'tailwindcss';
 @import './styles/site.css';
+@import './styles/experience.css';
+@import './styles/status.css';

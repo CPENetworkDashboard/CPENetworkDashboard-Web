@@ -2,7 +2,6 @@ import js from '@eslint/js'
 import tseslint from '@typescript-eslint/eslint-plugin'
 import tsparser from '@typescript-eslint/parser'
 import vuePlugin from 'eslint-plugin-vue'
-import vueParser from 'vue-eslint-parser'
 import prettier from 'eslint-config-prettier'
 
 export default [
@@ -33,7 +32,6 @@ export default [
   {
     files: ['**/*.vue'],
     languageOptions: {
-      parser: vueParser,
       parserOptions: {
         parser: tsparser,
         ecmaVersion: 'latest',

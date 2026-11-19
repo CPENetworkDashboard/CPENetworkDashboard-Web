@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import SiteIcon from '@/components/SiteIcon.vue'
 import { appIcon, routes } from '@/content'
 
 type ThemeMode = 'light' | 'dark'
 
 const theme = ref<ThemeMode>('light')
 const isDark = computed(() => theme.value === 'dark')
+const menuOpen = ref(false)
+const route = useRoute()
+watch(
+  () => route.fullPath,
+  () => {
+    menuOpen.value = false
+  }
+)
 
 function preferredTheme(): ThemeMode {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
@@ -17,8 +26,12 @@ function applyTheme(nextTheme: ThemeMode): void {
   document.documentElement.dataset.theme = nextTheme
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', nextTheme === 'dark' ? '#101311' : '#f5f4ee')
-  localStorage.setItem('cpe-theme', nextTheme)
+    ?.setAttribute('content', nextTheme === 'dark' ? '#101613' : '#f3f6f2')
+  try {
+    localStorage.setItem('cpe-theme', nextTheme)
+  } catch {
+    /* Theme still works without storage. */
+  }
 }
 
 function toggleTheme(): void {
@@ -27,7 +40,12 @@ function toggleTheme(): void {
 
 onMounted(() => {
   const existing = document.documentElement.dataset.theme
-  const saved = localStorage.getItem('cpe-theme')
+  let saved: string | null = null
+  try {
+    saved = localStorage.getItem('cpe-theme')
+  } catch {
+    /* Follow the initial theme. */
+  }
   const nextTheme =
     existing === 'dark' || existing === 'light'
       ? existing
@@ -39,23 +57,29 @@ onMounted(() => {
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar" @keydown.esc="menuOpen = false">
     <RouterLink class="brand-lockup" to="/" aria-label="CPE加加首页">
-      <img :src="appIcon" alt="" loading="eager" decoding="async" fetchpriority="high" />
+      <img :src="appIcon" alt="" width="36" height="36" loading="eager" decoding="async" />
       <span>
         <strong>CPE加加</strong>
         <small>CPE++</small>
       </span>
     </RouterLink>
     <div class="topbar-actions">
-      <nav class="nav-links" aria-label="主导航">
+      <nav
+        id="main-navigation"
+        class="nav-links"
+        :class="{ 'is-open': menuOpen }"
+        aria-label="主导航"
+      >
         <RouterLink
-          v-for="route in routes"
-          :key="route.path"
-          :to="route.path"
-          :class="{ active: $route.path === route.path }"
+          v-for="navItem in routes"
+          :key="navItem.path"
+          :to="navItem.path"
+          :class="{ active: $route.path === navItem.path }"
+          :aria-current="$route.path === navItem.path ? 'page' : undefined"
         >
-          {{ route.label }}
+          {{ navItem.label }}
         </RouterLink>
       </nav>
       <button
@@ -75,6 +99,16 @@ onMounted(() => {
         <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20.2 14.4A7.6 7.6 0 0 1 9.6 3.8 8.4 8.4 0 1 0 20.2 14.4Z" />
         </svg>
+      </button>
+      <button
+        class="mobile-menu-toggle"
+        type="button"
+        aria-controls="main-navigation"
+        :aria-expanded="menuOpen"
+        :aria-label="menuOpen ? '关闭导航' : '打开导航'"
+        @click="menuOpen = !menuOpen"
+      >
+        <SiteIcon :name="menuOpen ? 'close' : 'menu'" />
       </button>
     </div>
   </header>

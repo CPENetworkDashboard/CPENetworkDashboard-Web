@@ -2,13 +2,23 @@ import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
+import { devStatusPlugin } from './scripts/dev-status-plugin'
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [devStatusPlugin(), vue(), tailwindcss()],
   publicDir: 'public',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://cpe.yuan6.cn',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
   build: {

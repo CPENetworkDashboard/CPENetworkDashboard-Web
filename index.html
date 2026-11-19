@@ -11,7 +11,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/media/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/media/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/media/apple-touch-icon.png" />
-    <meta name="theme-color" content="#f5f4ee" />
+    <meta name="theme-color" content="#f3f6f2" />
     <script>
       ;(() => {
         try {
@@ -25,7 +25,7 @@
           document.documentElement.dataset.theme = theme
           document
             .querySelector('meta[name="theme-color"]')
-            ?.setAttribute('content', theme === 'dark' ? '#101311' : '#f5f4ee')
+            ?.setAttribute('content', theme === 'dark' ? '#101613' : '#f3f6f2')
         } catch {
           document.documentElement.dataset.theme = 'light'
         }
@@ -37,6 +37,14 @@
       content="看清信号、小区、锁定和测试结果，再决定怎么调。支持 Android、macOS 和 Windows。"
     />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="/media/app-icon-1024.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="CPE加加 / CPE++" />
+    <meta
+      name="twitter:description"
+      content="面向 4G/5G CPE 的状态查看、频段锁定与链路诊断工具。"
+    />
+    <meta name="twitter:image" content="/media/app-icon-1024.png" />
     <title>CPE加加 / CPE++</title>
   </head>
   <body>

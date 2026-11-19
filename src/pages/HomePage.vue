@@ -1,84 +1,128 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import LazyImage from '@/components/LazyImage.vue'
-import FlowAnimation from '@/components/FlowAnimation.vue'
-import { appIcon, heroDesktopImage, heroFacts, mobileScreens, telemetryWords } from '@/content'
+import ProductExplorer from '@/components/ProductExplorer.vue'
+import SiteIcon from '@/components/SiteIcon.vue'
+import { downloads, supportedDevices } from '@/content'
+import ProductStage from '@/components/ProductStage.vue'
+import { useProductMotion } from '@/composables/useProductMotion'
+const page = ref<HTMLElement | null>(null)
+useProductMotion(page)
 
-const marqueeGroups = [telemetryWords, telemetryWords, telemetryWords, telemetryWords]
+const platforms = computed(() =>
+  [
+    { name: 'Android', icon: 'android', id: 'android-3.7.1', note: 'Android 8.0 及以上' },
+    { name: 'macOS', icon: 'apple', id: 'macos-3.5.3', note: 'Apple Silicon · arm64' },
+    { name: 'Windows', icon: 'windows', id: 'windows-exe-3.5.3', note: 'EXE / MSI / 免安装' },
+  ].map((platform) => ({
+    ...platform,
+    version: downloads.find((download) => download.id === platform.id)?.version,
+  }))
+)
 </script>
 
 <template>
-  <section class="page-view home-page">
-    <div class="hero-copy">
-      <div class="app-mark">
-        <img :src="appIcon" alt="" loading="eager" decoding="async" fetchpriority="high" />
-        <span>Android 3.7.1 · macOS / Windows 3.5.3</span>
-      </div>
-      <h1 class="hero-title">
-        <span class="hero-title-main">CPE加加</span>
-        <span class="hero-title-sub">CPE++</span>
-      </h1>
-      <p>
-        Android 3.7.1 已单独发布，应用名为 CPE数据看板；macOS 和 Windows 当前仍为 3.5.3。 它把 CPE
-        当前状态、锁定结果和链路测试放到同一个工作界面。
-      </p>
-      <p class="hero-note">
-        信号、小区、锁定、测速、Ping
-        和路由测试放在同一个地方。现场调试时少猜一点，改完以后也能马上验证。
-      </p>
-      <div class="hero-actions">
-        <RouterLink class="action primary" to="/download">下载适合的版本</RouterLink>
-        <RouterLink class="action secondary" to="/product">看看它怎么用</RouterLink>
-      </div>
-      <div class="fact-line" aria-label="核心指标">
-        <span v-for="fact in heroFacts" :key="fact.label">
-          <small>{{ fact.label }}</small>
-          <strong>{{ fact.value }}</strong>
-        </span>
-      </div>
-    </div>
-
-    <div class="hero-stage" aria-label="产品界面预览">
-      <FlowAnimation />
-      <div class="scan-line"></div>
-      <div class="signal-radar" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-      <div class="desktop-window hero-desktop">
-        <div class="window-bar">
-          <span></span>
-          <span></span>
-          <span></span>
-          <strong>Desktop Dashboard</strong>
+  <div ref="page" class="landing">
+    <section class="landing-hero content-width" aria-labelledby="home-title">
+      <div class="landing-hero-copy">
+        <RouterLink class="release-note" to="/changelog"
+          ><span>Android 3.7.1</span>正式版现已发布</RouterLink
+        >
+        <h1 id="home-title">CPE 网络管理<br />与诊断工具。</h1>
+        <p>
+          面向 4G / 5G CPE 的跨平台管理软件。集中查看网络状态、管理频段与小区，并通过测速、Ping
+          和路由追踪完成链路诊断。
+        </p>
+        <div class="landing-actions">
+          <RouterLink class="action primary" to="/download"
+            ><SiteIcon name="download" :size="18" />下载 CPE加加</RouterLink
+          ><RouterLink class="landing-text-link" to="/product">了解产品功能</RouterLink>
         </div>
-        <div class="desktop-screen-frame">
-          <LazyImage :src="heroDesktopImage" alt="CPE加加电脑端截图" eager />
+        <div class="landing-platforms" aria-label="支持的平台">
+          <span v-for="platform in platforms" :key="platform.name"
+            ><SiteIcon :name="platform.icon" :size="17" />{{ platform.name }}</span
+          >
         </div>
       </div>
-      <div class="phone-shell hero-phone">
-        <LazyImage :src="mobileScreens[0]" alt="CPE加加 Android 截图" eager />
+      <ProductStage />
+    </section>
+    <section class="landing-devices content-width" data-reveal aria-label="已适配的设备厂商">
+      <p>支持多种主流 CPE 设备</p>
+      <div>
+        <span v-for="[brand] in supportedDevices" :key="brand">{{ brand.split(' / ')[0] }}</span>
       </div>
-      <div class="live-card">
-        <span>Local CPE</span>
-        <strong>192.168.x.1</strong>
-        <small>signal / lock / test</small>
+      <RouterLink :to="{ path: '/product', hash: '#devices' }">查看适配机型</RouterLink>
+    </section>
+    <section class="landing-workflow content-width" data-reveal aria-labelledby="workflow-title">
+      <div class="landing-section-heading">
+        <h2 id="workflow-title">网络监测、设备管理<br />与链路诊断。</h2>
+        <p>以统一的工作界面完成日常排查。<br />关键指标、配置操作与测试结果集中呈现。</p>
       </div>
-      <div class="metric-tape" aria-hidden="true">
-        <span>RSRP -86</span>
-        <span>SINR 23</span>
-        <span>PCI 147</span>
-        <span>AMBR 1000M</span>
+      <ProductExplorer />
+    </section>
+    <section
+      class="landing-mobile-section content-width"
+      data-reveal
+      aria-labelledby="mobile-title"
+    >
+      <div class="landing-mobile-images" aria-label="Android 功能界面">
+        <img
+          src="/media/phone/mobile-device-neighbor-cells.webp"
+          alt="Android 端设备信息与邻区界面"
+          width="1264"
+          height="2660"
+          loading="lazy"
+          decoding="async"
+        /><img
+          src="/media/phone/mobile-band-selection.webp"
+          alt="Android 端频段选择界面"
+          width="1264"
+          height="2660"
+          loading="lazy"
+          decoding="async"
+        />
       </div>
-    </div>
-
-    <div class="marquee" aria-hidden="true">
-      <div class="marquee-track">
-        <div v-for="(group, groupIndex) in marqueeGroups" :key="groupIndex" class="marquee-group">
-          <span v-for="word in group" :key="`${groupIndex}-${word}`">{{ word }}</span>
-        </div>
+      <div class="landing-mobile-copy">
+        <SiteIcon name="phone" :size="30" />
+        <h2 id="mobile-title">移动端管理，<br />适用于现场调试。</h2>
+        <p>
+          通过 Android
+          客户端查看信号与邻区、配置频段及小区锁定，并在现场执行网络测试。适合设备安装、位置调整与日常维护。
+        </p>
+        <ul>
+          <li><SiteIcon name="check" :size="17" />实时查看连接与射频状态</li>
+          <li><SiteIcon name="check" :size="17" />管理频段、ARFCN 与 PCI</li>
+          <li><SiteIcon name="check" :size="17" />测速、Ping 与路由测试</li>
+        </ul>
+        <RouterLink class="landing-text-link" :to="{ path: '/product', hash: '#mobile' }"
+          >查看 Android 功能</RouterLink
+        >
       </div>
-    </div>
-  </section>
+    </section>
+    <section class="landing-download content-width" data-reveal aria-labelledby="platform-title">
+      <div class="landing-section-heading">
+        <h2 id="platform-title">在常用设备上，<br />管理你的 CPE。</h2>
+        <RouterLink class="landing-text-link" to="/download">全部下载与校验</RouterLink>
+      </div>
+      <div class="landing-download-platforms">
+        <RouterLink
+          v-for="platform in platforms"
+          :key="platform.id"
+          :to="{ path: '/download', query: { file: platform.id } }"
+          ><SiteIcon :name="platform.icon" :size="29" />
+          <h3>{{ platform.name }}</h3>
+          <p>{{ platform.note }}</p>
+          <span>v{{ platform.version }}<SiteIcon name="download" :size="18" /></span
+        ></RouterLink>
+      </div>
+    </section>
+    <section class="landing-status content-width" data-reveal>
+      <div>
+        <SiteIcon name="activity" :size="24" />
+        <h2>服务运行记录</h2>
+        <p>查看各项服务的可用率、响应时间与历史记录。</p>
+      </div>
+      <RouterLink class="action secondary" to="/status">打开服务状态</RouterLink>
+    </section>
+  </div>
 </template>

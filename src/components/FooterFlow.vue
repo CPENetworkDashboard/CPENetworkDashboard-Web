@@ -128,13 +128,11 @@ onUnmounted(() => {
 
 .footer-flow-line-a {
   top: 26px;
-  animation: footer-line 36s linear infinite;
 }
 
 .footer-flow-line-b {
   bottom: 32px;
   opacity: 0.36;
-  animation: footer-line-reverse 42s linear infinite;
 }
 
 :global(:root[data-theme='dark'] .footer-flow) {
@@ -159,24 +157,6 @@ onUnmounted(() => {
   opacity: 0.34;
 }
 
-@keyframes footer-line {
-  from {
-    translate: 0 0;
-  }
-  to {
-    translate: -50% 0;
-  }
-}
-
-@keyframes footer-line-reverse {
-  from {
-    translate: -50% 0;
-  }
-  to {
-    translate: 0 0;
-  }
-}
-
 @media (max-width: 720px) {
   .footer-flow {
     margin-top: 48px;
@@ -187,12 +167,6 @@ onUnmounted(() => {
     left: 0;
     bottom: 12px;
     transform: translate3d(calc(-14% + var(--footer-shift)), 0, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .footer-flow-line {
-    animation: none;
   }
 }
 </style>

@@ -22,7 +22,11 @@
 
 const KV_NAMESPACE = 'cpeweb'
 const LEGACY_KV_NAMESPACES = ['cpe_network_dashboard_web']
-const EDGE_BUILD = '2026-10-21.2'
+const EDGE_BUILD = '2026-11-19.1'
+const STATUS_INTERVAL_MS = 5 * 60 * 1000
+const STATUS_IDS = ['website', 'health', 'releases', 'android', 'windows', 'macos']
+const STATUS_PREFIX = 'status_v1'
+const STATUS_DAY_OFFSET_MS = 8 * 3600_000
 const ANALYTICS_KEY = 'analytics'
 const UPDATES_KEY = 'updates'
 const CONFIG_KEY = 'config'
@@ -515,7 +519,7 @@ const CN_CITY_NAME_ALIASES = {
   guyuan: '固原',
   zhongwei: '中卫',
   urumqi: '乌鲁木齐',
-  'ürümqi': '乌鲁木齐',
+  ürümqi: '乌鲁木齐',
   wulumuqi: '乌鲁木齐',
   karamay: '克拉玛依',
   kelamayi: '克拉玛依',
@@ -606,7 +610,10 @@ function normalizeTextKey(value) {
 function stripChinaAdminSuffix(value) {
   return String(value || '')
     .trim()
-    .replace(/(土家族苗族|藏族羌族|哈尼族彝族|傣族景颇族|蒙古族藏族|柯尔克孜|哈萨克|蒙古|藏族|彝族|傣族|白族|苗族|回族|壮族)自治州$/, '')
+    .replace(
+      /(土家族苗族|藏族羌族|哈尼族彝族|傣族景颇族|蒙古族藏族|柯尔克孜|哈萨克|蒙古|藏族|彝族|傣族|白族|苗族|回族|壮族)自治州$/,
+      ''
+    )
     .replace(/(维吾尔|壮族|回族|特别)?自治区$/, '')
     .replace(/省$/, '')
     .replace(/市$/, '')
@@ -620,9 +627,7 @@ function aliasChinaPlaceName(value, region = '') {
   if (!raw) return ''
 
   const key = normalizeTextKey(raw)
-  const regionName = stripChinaAdminSuffix(
-    CN_CITY_NAME_ALIASES[normalizeTextKey(region)] || region
-  )
+  const regionName = stripChinaAdminSuffix(CN_CITY_NAME_ALIASES[normalizeTextKey(region)] || region)
   const regionAliases = CN_CITY_ALIAS_BY_REGION[regionName] || {}
   const candidates = [
     key,
@@ -679,14 +684,16 @@ function normalizeChinaGeoFields(input = {}) {
 
   return {
     country,
-    countryCode: countryCode === 'TW' || countryCode === 'HK' || countryCode === 'MO' ? 'CN' : countryCode,
+    countryCode:
+      countryCode === 'TW' || countryCode === 'HK' || countryCode === 'MO' ? 'CN' : countryCode,
     region,
     city,
   }
 }
 
 function stringFromGeoField(value) {
-  if (Array.isArray(value)) return value.map((item) => String(item || '').trim()).find(Boolean) || ''
+  if (Array.isArray(value))
+    return value.map((item) => String(item || '').trim()).find(Boolean) || ''
   return String(value || '').trim()
 }
 
@@ -1074,7 +1081,8 @@ const DEFAULT_RELEASES = {
     stable: releaseFromDownload('windows-exe-3.5.3', {
       versionCode: 353,
       releaseDate: '2026-06-09',
-      notes: '3.5.3 Windows 桌面版：统一 CPE加加 / CPE++ 品牌和新图标，优化更新检查；默认推荐 EXE 安装版，Portable 和 MSI 可手动选择。',
+      notes:
+        '3.5.3 Windows 桌面版：统一 CPE加加 / CPE++ 品牌和新图标，优化更新检查；默认推荐 EXE 安装版，Portable 和 MSI 可手动选择。',
       alternatives: ['windows-portable-3.5.3', 'windows-msi-3.5.3'].map((id) =>
         releaseDownloadPayload(id)
       ),
@@ -1084,7 +1092,8 @@ const DEFAULT_RELEASES = {
     stable: releaseFromDownload('macos-3.5.3', {
       versionCode: 353,
       releaseDate: '2026-06-09',
-      notes: '3.5.3 macOS 桌面版：统一 CPE加加 / CPE++ 品牌和新图标，优化更新检查，并同步烽火后台重登录优化。',
+      notes:
+        '3.5.3 macOS 桌面版：统一 CPE加加 / CPE++ 品牌和新图标，优化更新检查，并同步烽火后台重登录优化。',
     }),
   },
   ios: {
@@ -1345,7 +1354,10 @@ function normalizePublishedRelease(body) {
           version: String(body.download.version || body.version || '').trim(),
           label: String(body.download.label || body.title || '').trim(),
           fileName: String(body.download.fileName || '').trim(),
-          mode: Array.isArray(body.download.chunks) && body.download.chunks.length ? 'chunked' : 'single',
+          mode:
+            Array.isArray(body.download.chunks) && body.download.chunks.length
+              ? 'chunked'
+              : 'single',
           href: String(body.download.href || '').trim(),
           chunks: Array.isArray(body.download.chunks) ? body.download.chunks.map(String) : [],
           chunkBytes: Array.isArray(body.download.chunkBytes)
@@ -1566,6 +1578,7 @@ function normalizeConfig(raw = {}) {
 
   return {
     writeToken: String(writeToken || '').trim(),
+    statusToken: String(raw.CPE_STATUS_TOKEN || '').trim(),
     readToken: String(readToken || '').trim(),
     amapWebServiceKey: String(amapKey || '').trim(),
   }
@@ -1586,6 +1599,7 @@ async function readRuntimeConfig(kv = edgeKv()) {
 
   const keys = [
     'CPE_STATS_TOKEN',
+    'CPE_STATUS_TOKEN',
     'STATS_WRITE_TOKEN',
     'CPE_ANALYTICS_TOKEN',
     'ANALYTICS_READ_TOKEN',
@@ -1708,7 +1722,7 @@ function sameSiteRequest(request, options = {}) {
 async function verifyWriteToken(request, body = {}, config = null) {
   const runtimeConfig = config || (await readRuntimeConfig())
   const writeToken = runtimeConfig.writeToken
-  if (!writeToken) return true
+  if (!writeToken) return false
   const auth = request.headers.get('Authorization') || ''
   const headerToken = request.headers.get('X-CPE-Stats-Token') || ''
   const adminToken = request.headers.get('X-Admin-Token') || ''
@@ -1754,7 +1768,8 @@ async function verifyReadToken(request, config = null) {
 async function guardAnalyticsRead(request) {
   const config = await readRuntimeConfig()
   if (!config.readToken) return json({ ok: false, error: 'Analytics token is not configured' }, 403)
-  if (!(await verifyReadToken(request, config))) return json({ ok: false, error: 'Access denied' }, 403)
+  if (!(await verifyReadToken(request, config)))
+    return json({ ok: false, error: 'Access denied' }, 403)
   return null
 }
 
@@ -2286,10 +2301,7 @@ async function readAnalyticsStore(kv) {
   const namespace = kvNamespace(kv)
   const cached = runtime.analyticsStores.get(namespace)
   const cacheAge = cached ? Date.now() - cached.loadedAt : Infinity
-  if (
-    cached?.store &&
-    (runtime.dirtyEvents > 0 || cacheAge < ANALYTICS_READ_CACHE_TTL_MS)
-  ) {
+  if (cached?.store && (runtime.dirtyEvents > 0 || cacheAge < ANALYTICS_READ_CACHE_TTL_MS)) {
     return cached.store
   }
 
@@ -2461,8 +2473,7 @@ function geoFromStore(store) {
     countries: Array.from(countryCounts.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count),
-    cities: Array.from(cityCounts.values())
-      .sort((a, b) => b.count - a.count),
+    cities: Array.from(cityCounts.values()).sort((a, b) => b.count - a.count),
   }
 }
 
@@ -2555,12 +2566,16 @@ function downloadVersionKey(download) {
 }
 
 function displayDownloadPlatform(platform) {
-  return {
-    android: 'Android',
-    macos: 'macOS',
-    windows: 'Windows',
-    ios: 'iOS',
-  }[platform] || platform || 'Unknown'
+  return (
+    {
+      android: 'Android',
+      macos: 'macOS',
+      windows: 'Windows',
+      ios: 'iOS',
+    }[platform] ||
+    platform ||
+    'Unknown'
+  )
 }
 
 function buildDownloadsByVersion(downloadsByFile, includeLegacy = false) {
@@ -2572,16 +2587,15 @@ function buildDownloadsByVersion(downloadsByFile, includeLegacy = false) {
     const stats = downloadsByFile[id] || { total: 0, today: 0 }
     if (!includeLegacy && !DOWNLOADS[id]) continue
     if (includeLegacy && !DOWNLOADS[id] && Number(stats.total || 0) <= 0) continue
-    const current =
-      downloadsByVersion[key] || {
-        id: key,
-        platform: displayDownloadPlatform(download.platform),
-        version: download.version,
-        label: `${displayDownloadPlatform(download.platform)} ${download.version}`,
-        total: 0,
-        today: 0,
-        fileIds: [],
-      }
+    const current = downloadsByVersion[key] || {
+      id: key,
+      platform: displayDownloadPlatform(download.platform),
+      version: download.version,
+      label: `${displayDownloadPlatform(download.platform)} ${download.version}`,
+      total: 0,
+      today: 0,
+      fileIds: [],
+    }
     current.total += Number(stats.total) || 0
     current.today += Number(stats.today) || 0
     current.fileIds.push(id)
@@ -2599,19 +2613,17 @@ function downloadRedirectHref(fileId, request) {
   const url = new URL(request.url)
   const item = DOWNLOADS[fileId]
   const part = Number(url.searchParams.get('part'))
-  if (
-    Number.isInteger(part) &&
-    part >= 0 &&
-    Array.isArray(item?.chunks) &&
-    item.chunks[part]
-  ) {
+  if (Number.isInteger(part) && part >= 0 && Array.isArray(item?.chunks) && item.chunks[part]) {
     return item.chunks[part]
   }
   return item?.href || '/#/download'
 }
 
 function redirectToDownload(request, fileId) {
-  return Response.redirect(new URL(downloadRedirectHref(fileId, request), request.url).toString(), 302)
+  return Response.redirect(
+    new URL(downloadRedirectHref(fileId, request), request.url).toString(),
+    302
+  )
 }
 
 async function handleCounter(request) {
@@ -2625,7 +2637,11 @@ async function handleCounter(request) {
 
     if (!readOnly) {
       if (!sameSiteRequest(request)) return json({ error: 'Access denied' }, 403)
-      const writeAllowed = await consumeRate(`counter-write:${ipBucket(getClientIP(request))}`, 60, 3600)
+      const writeAllowed = await consumeRate(
+        `counter-write:${ipBucket(getClientIP(request))}`,
+        60,
+        3600
+      )
       if (!writeAllowed) return json({ error: 'Too many requests', build: EDGE_BUILD }, 429)
       const result = await trackInAnalyticsStore(kv, (store) => ({
         ...incrementStoredCounter(store, 'visits', 'visits', todayKey),
@@ -2646,7 +2662,11 @@ async function handleCounter(request) {
 }
 
 async function guardReadRequest(request, name, limit = 360, windowSeconds = 300) {
-  const allowed = await consumeRate(`${name}:${ipBucket(getClientIP(request))}`, limit, windowSeconds)
+  const allowed = await consumeRate(
+    `${name}:${ipBucket(getClientIP(request))}`,
+    limit,
+    windowSeconds
+  )
   if (!allowed) return json({ error: 'Too many requests', build: EDGE_BUILD }, 429)
   return null
 }
@@ -2820,7 +2840,11 @@ async function handleDownload(request) {
     return redirectToDownload(request, fileId)
   }
 
-  const allowed = await consumeRate(`download:${fileId}:${ipBucket(getClientIP(request))}`, 90, 3600)
+  const allowed = await consumeRate(
+    `download:${fileId}:${ipBucket(getClientIP(request))}`,
+    90,
+    3600
+  )
   if (!allowed) return json({ error: 'Too many requests', build: EDGE_BUILD }, 429)
 
   try {
@@ -2884,7 +2908,12 @@ async function handleDownloads(request) {
     const downloads = await readDownloads(kv, todayKey, summary)
     return json({ ...downloads, build: EDGE_BUILD })
   } catch {
-    return json({ downloadsByFile: {}, downloadsByVersion: {}, downloadsTotal: 0, build: EDGE_BUILD })
+    return json({
+      downloadsByFile: {},
+      downloadsByVersion: {},
+      downloadsTotal: 0,
+      build: EDGE_BUILD,
+    })
   }
 }
 
@@ -3006,8 +3035,7 @@ async function handleUpdateCheck(request) {
         url.searchParams.get('versionCode') ||
         url.searchParams.get('buildNumber') ||
         0
-    ) ||
-    0
+    ) || 0
 
   const kv = edgeKv()
   const store = await readUpdateStore(kv)
@@ -3020,9 +3048,7 @@ async function handleUpdateCheck(request) {
     null
   const latest = serializeRelease(release, request)
   const versionUpdate =
-    latest && currentVersion
-      ? compareVersions(latest.version, currentVersion) > 0
-      : false
+    latest && currentVersion ? compareVersions(latest.version, currentVersion) > 0 : false
   const sameVersionName =
     latest && currentVersion ? compareVersions(latest.version, currentVersion) === 0 : false
   const codeUpdate =
@@ -3099,21 +3125,19 @@ async function handleSummary(request) {
   const storeSummary = await readSummaryFromKv(kv, todayKey)
   const legacyStoreSummaries = await readLegacyStoreSummaries(todayKey)
   const visits = await readPublicVisits(kv, todayKey, storeSummary, legacyStoreSummaries)
-  const downloads = await readDownloads(kv, todayKey, storeSummary, legacyStoreSummaries).catch(() => ({
-    downloadsByFile: {},
-    downloadsByVersion: {},
-    downloadsTotal: 0,
-  }))
+  const downloads = await readDownloads(kv, todayKey, storeSummary, legacyStoreSummaries).catch(
+    () => ({
+      downloadsByFile: {},
+      downloadsByVersion: {},
+      downloadsTotal: 0,
+    })
+  )
   const baseline = await readStatsBaseline(kv, todayKey)
   const combinedSummary = mergeBaselineIntoSummary(
     combineAnalyticsSummaries(storeSummary, ...legacyStoreSummaries),
     baseline
   )
-  if (
-    visits.total > 0 ||
-    downloads.downloadsTotal > 0 ||
-    storeSummary.recent.length > 0
-  ) {
+  if (visits.total > 0 || downloads.downloadsTotal > 0 || storeSummary.recent.length > 0) {
     return json({ ...combinedSummary, visits, ...downloads, build: EDGE_BUILD })
   }
 
@@ -3245,7 +3269,9 @@ async function handleAnalyticsDebug(request) {
   for (const kv of kvs) {
     namespaces.push(await readDiagnosticsForKv(kv, todayKey, { deep }))
   }
-  const current = deep ? await readSummaryFromKv(kvs[0], todayKey).catch(() => emptySummary()) : emptySummary()
+  const current = deep
+    ? await readSummaryFromKv(kvs[0], todayKey).catch(() => emptySummary())
+    : emptySummary()
   const legacy = deep ? await readLegacyStoreSummaries(todayKey).catch(() => []) : []
   const baseline = await readStatsBaseline(kvs[0], todayKey)
   const publicVisits = deep
@@ -3307,7 +3333,8 @@ async function handleAnalyticsBaseline(request) {
 
   const canRead = await verifyReadToken(request, config)
   const canWrite = Boolean(config.writeToken) && (await verifyWriteToken(request, body, config))
-  if (!canRead && !canWrite) return json({ ok: false, error: 'Access denied', build: EDGE_BUILD }, 403)
+  if (!canRead && !canWrite)
+    return json({ ok: false, error: 'Access denied', build: EDGE_BUILD }, 403)
 
   const kv = edgeKv()
   const todayKey = getTodayKey()
@@ -3315,7 +3342,9 @@ async function handleAnalyticsBaseline(request) {
     return json({ ok: true, baseline: await readStatsBaseline(kv, todayKey), build: EDGE_BUILD })
   }
 
-  const incoming = normalizeBaseline(body.baseline && typeof body.baseline === 'object' ? body.baseline : body)
+  const incoming = normalizeBaseline(
+    body.baseline && typeof body.baseline === 'object' ? body.baseline : body
+  )
   if (body.mode === 'add') {
     const current = await readStatsBaseline(kv, todayKey)
     const merged = addBaselines(current, incoming)
@@ -3339,6 +3368,358 @@ async function handleAnalyticsBaseline(request) {
   return json({ ok: true, mode: 'replace', baseline: next, build: EDGE_BUILD })
 }
 
+// Status measurements are written only by the authenticated external collector.
+// Hour buckets retain individual samples; daily summaries remain small as history grows.
+async function statusRead(kv, key) {
+  const text = await kv.get(key, { type: 'text' })
+  if (text === null || text === undefined || text === '') return null
+  return JSON.parse(typeof text === 'string' ? text : await text.text())
+}
+
+function statusAggregate(samples) {
+  const services = Object.fromEntries(
+    STATUS_IDS.map((id) => [
+      id,
+      { checks: 0, available: 0, slow: 0, failed: 0, latencyTotal: 0, maxLatency: 0 },
+    ])
+  )
+  for (const sample of samples) {
+    for (const result of sample.services) {
+      const metric = services[result.id]
+      if (!metric) continue
+      metric.checks += 1
+      if (result.state === 'unavailable') metric.failed += 1
+      else {
+        metric.available += 1
+        metric.slow += result.state === 'slow' ? 1 : 0
+        metric.latencyTotal += result.latencyMs
+        metric.maxLatency = Math.max(metric.maxLatency, result.latencyMs)
+      }
+    }
+  }
+  return {
+    samples: samples.length,
+    availableSamples: samples.filter((sample) =>
+      sample.services.every((result) => result.state !== 'unavailable')
+    ).length,
+    services,
+  }
+}
+
+function statusMergeMetrics(groups) {
+  const result = statusAggregate([])
+  for (const group of groups) {
+    result.samples += group.samples || 0
+    result.availableSamples += group.availableSamples || 0
+    for (const id of STATUS_IDS) {
+      const metric = group.services?.[id]
+      if (!metric) continue
+      for (const field of ['checks', 'available', 'slow', 'failed', 'latencyTotal'])
+        result.services[id][field] += metric[field] || 0
+      result.services[id].maxLatency = Math.max(
+        result.services[id].maxLatency,
+        metric.maxLatency || 0
+      )
+    }
+  }
+  return result
+}
+
+function statusMetricView(metric) {
+  return {
+    ...metric,
+    availability: metric.checks
+      ? Number(((metric.available / metric.checks) * 100).toFixed(3))
+      : null,
+    meanLatency: metric.available ? Math.round(metric.latencyTotal / metric.available) : null,
+  }
+}
+
+function normalizeStatusReport(body) {
+  const at = Date.parse(body?.at)
+  const now = Date.now()
+  if (!Number.isFinite(at) || at > now + 60_000 || at < now - 7 * 86400_000)
+    throw new Error('Invalid observation timestamp')
+  if (!Array.isArray(body.services) || body.services.length !== STATUS_IDS.length)
+    throw new Error('Exactly six service results are required')
+  const ids = new Set()
+  const services = body.services.map((item) => {
+    if (!STATUS_IDS.includes(item.id) || ids.has(item.id))
+      throw new Error('Invalid or duplicate service')
+    ids.add(item.id)
+    if (!['operational', 'slow', 'unavailable'].includes(item.state))
+      throw new Error('Invalid service state')
+    if (
+      typeof item.latencyMs !== 'number' ||
+      !Number.isFinite(item.latencyMs) ||
+      item.latencyMs < 0 ||
+      item.latencyMs > 60_000
+    )
+      throw new Error('Invalid latency')
+    if (
+      item.httpStatus !== null &&
+      (!Number.isInteger(item.httpStatus) || item.httpStatus < 100 || item.httpStatus > 599)
+    )
+      throw new Error('Invalid HTTP status')
+    if (
+      item.state !== 'unavailable' &&
+      (item.httpStatus === null ||
+        item.httpStatus < 200 ||
+        item.httpStatus >= 300 ||
+        item.latencyMs >= 8000)
+    )
+      throw new Error('Successful samples need a valid HTTP response')
+    const version =
+      typeof item.version === 'string' &&
+      /^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(item.version)
+        ? item.version
+        : undefined
+    const build =
+      typeof item.build === 'string' && /^[a-zA-Z0-9._-]{1,60}$/.test(item.build)
+        ? item.build
+        : undefined
+    if (
+      ['android', 'windows', 'macos'].includes(item.id) &&
+      item.state !== 'unavailable' &&
+      !version
+    )
+      throw new Error('Successful update checks require a valid release version')
+    return {
+      id: item.id,
+      state:
+        item.state === 'unavailable'
+          ? 'unavailable'
+          : item.latencyMs >= 1500
+            ? 'slow'
+            : 'operational',
+      latencyMs: Math.round(item.latencyMs),
+      httpStatus: item.httpStatus,
+      checkedAt: new Date(at).toISOString(),
+      detail:
+        item.state === 'unavailable'
+          ? item.httpStatus
+            ? 'HTTP ' + item.httpStatus + ' · 检查未通过'
+            : '连接失败或响应超时'
+          : '服务响应正常',
+      ...(version ? { version } : {}),
+      ...(build ? { build } : {}),
+    }
+  })
+  return {
+    at: new Date(at).toISOString(),
+    slot: Math.floor(at / STATUS_INTERVAL_MS),
+    source: 'scheduled-http-monitor',
+    services,
+  }
+}
+
+async function storeStatusReport(kv, report) {
+  const sampleKey = STATUS_PREFIX + '_sample__' + report.slot
+  const stored = await statusRead(kv, sampleKey)
+  const sample = stored || report
+  if (!stored) await kvPutText(kv, sampleKey, JSON.stringify(report))
+  // Deterministic slot keys are canonical. Rebuild current and previous hour so
+  // eventual replication or a retried partial write cannot lose a measurement.
+  const rebuilt = new Map()
+  for (const hourStart of [
+    Math.floor(report.slot / 12) * 12 - 12,
+    Math.floor(report.slot / 12) * 12,
+  ]) {
+    const records = await Promise.all(
+      Array.from({ length: 12 }, (_, index) => {
+        const slot = hourStart + index
+        return slot === report.slot ? sample : statusRead(kv, STATUS_PREFIX + '_sample__' + slot)
+      })
+    )
+    const samples = records.filter(Boolean).sort((a, b) => a.slot - b.slot)
+    if (!samples.length) continue
+    const hour = new Date(hourStart * STATUS_INTERVAL_MS).toISOString().slice(0, 13)
+    const date = new Date(hourStart * STATUS_INTERVAL_MS + STATUS_DAY_OFFSET_MS)
+      .toISOString()
+      .slice(0, 10)
+    const bucket = { schemaVersion: 1, hour, date, samples }
+    await kvPutText(kv, STATUS_PREFIX + '_hour__' + hour, JSON.stringify(bucket))
+    rebuilt.set(hour, bucket)
+  }
+  const dates = [...new Set([...rebuilt.values()].map((bucket) => bucket.date))]
+  for (const date of dates) {
+    const midnight = Date.parse(date + 'T00:00:00+08:00')
+    const hourNames = Array.from({ length: 24 }, (_, index) =>
+      new Date(midnight + index * 3600_000).toISOString().slice(0, 13)
+    )
+    const buckets = await Promise.all(
+      hourNames.map((hour) => rebuilt.get(hour) || statusRead(kv, STATUS_PREFIX + '_hour__' + hour))
+    )
+    const daily = statusAggregate(buckets.flatMap((bucket) => bucket?.samples || []))
+    const observed = buckets.flatMap((bucket) => bucket?.samples || [])
+    daily.firstAt = observed[0]?.at || sample.at
+    await kvPutText(
+      kv,
+      STATUS_PREFIX + '_day__' + date,
+      JSON.stringify({ schemaVersion: 1, date, ...daily })
+    )
+  }
+  const meta = (await statusRead(kv, STATUS_PREFIX + '_meta')) || {
+    schemaVersion: 1,
+    firstAt: sample.at,
+    lastAt: sample.at,
+    latest: sample,
+  }
+  meta.firstAt = meta.firstAt < sample.at ? meta.firstAt : sample.at
+  if (sample.at >= meta.lastAt) {
+    meta.lastAt = sample.at
+    meta.latest = sample
+  }
+  await kvPutText(kv, STATUS_PREFIX + '_meta', JSON.stringify(meta))
+  runtimeState().statusCache = null
+  return { stored: !stored, duplicate: Boolean(stored), checkedAt: sample.at, slot: sample.slot }
+}
+
+async function handleStatusIngest(request) {
+  try {
+    const config = await readRuntimeConfig()
+    const token = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '')
+    if (!config.statusToken || token !== config.statusToken)
+      return json({ ok: false, error: 'Access denied' }, 403)
+    const blocked = await guardReadRequest(request, 'status-write', 80, 3600)
+    if (blocked) return blocked
+    let report
+    try {
+      report = normalizeStatusReport(await readJsonLimited(request))
+    } catch (error) {
+      return json({ ok: false, error: error.message }, 400)
+    }
+    const runtime = runtimeState()
+    const previous = runtime.statusQueue || Promise.resolve()
+    const queued = previous.catch(() => {}).then(() => storeStatusReport(edgeKv(), report))
+    runtime.statusQueue = queued.catch(() => {})
+    return json({ ok: true, ...(await queued) })
+  } catch {
+    return json({ ok: false, error: 'Status storage unavailable' }, 503)
+  }
+}
+
+async function readStatusSummary(kv, days) {
+  const now = Date.now()
+  const currentSlot = Math.floor(now / STATUS_INTERVAL_MS)
+  const today = new Date(now + STATUS_DAY_OFFSET_MS).toISOString().slice(0, 10)
+  const midnight = Date.parse(today + 'T00:00:00+08:00')
+  const meta = await statusRead(kv, STATUS_PREFIX + '_meta')
+  const dates = Array.from({ length: days }, (_, index) =>
+    new Date(midnight + STATUS_DAY_OFFSET_MS - (days - index - 1) * 86400_000)
+      .toISOString()
+      .slice(0, 10)
+  )
+  const storedDays = []
+  // Limit parallel KV reads so a longer history does not create an unbounded burst.
+  for (let index = 0; index < dates.length; index += 6)
+    storedDays.push(
+      ...(await Promise.all(
+        dates.slice(index, index + 6).map((date) => statusRead(kv, STATUS_PREFIX + '_day__' + date))
+      ))
+    )
+  const firstAt =
+    [meta?.firstAt, ...storedDays.map((day) => day?.firstAt)].filter(Boolean).sort()[0] || null
+  const firstSlot = firstAt ? Math.floor(Date.parse(firstAt) / STATUS_INTERVAL_MS) : null
+  const daily = dates.map((date, index) => {
+    const metrics = storedDays[index] || statusAggregate([])
+    const startSlot = Math.floor(Date.parse(date + 'T00:00:00+08:00') / STATUS_INTERVAL_MS)
+    const endSlot = Math.min(currentSlot, startSlot + 287)
+    const expected =
+      firstSlot === null ? 0 : Math.max(0, endSlot - Math.max(startSlot, firstSlot) + 1)
+    return {
+      date,
+      samples: metrics.samples,
+      availableSamples: metrics.availableSamples,
+      expected,
+      coverage: expected
+        ? Math.min(100, Number(((metrics.samples / expected) * 100).toFixed(2)))
+        : null,
+      services: Object.fromEntries(
+        STATUS_IDS.map((id) => [id, statusMetricView(metrics.services[id])])
+      ),
+    }
+  })
+  const aggregate = statusMergeMetrics(daily)
+  const expected = daily.reduce((sum, day) => sum + day.expected, 0)
+  const totals = Object.values(aggregate.services).reduce(
+    (sum, metric) => ({
+      checks: sum.checks + metric.checks,
+      available: sum.available + metric.available,
+      failed: sum.failed + metric.failed,
+      latencyTotal: sum.latencyTotal + metric.latencyTotal,
+    }),
+    { checks: 0, available: 0, failed: 0, latencyTotal: 0 }
+  )
+  const hours = Array.from({ length: 25 }, (_, index) =>
+    new Date(now - (24 - index) * 3600_000).toISOString().slice(0, 13)
+  )
+  const buckets = []
+  for (let index = 0; index < hours.length; index += 6)
+    buckets.push(
+      ...(await Promise.all(
+        hours
+          .slice(index, index + 6)
+          .map((hour) => statusRead(kv, STATUS_PREFIX + '_hour__' + hour))
+      ))
+    )
+  const history = buckets
+    .flatMap((bucket) => bucket?.samples || [])
+    .filter((sample) => Date.parse(sample.at) >= now - 86400_000)
+    .sort((a, b) => a.slot - b.slot)
+  const latest =
+    [meta?.latest, history[history.length - 1]]
+      .filter(Boolean)
+      .sort((a, b) => a.slot - b.slot)
+      .pop() || null
+  return {
+    ok: true,
+    schemaVersion: 1,
+    source: 'scheduled-monitor',
+    timeZone: 'Asia/Shanghai',
+    intervalSeconds: STATUS_INTERVAL_MS / 1000,
+    windowDays: days,
+    firstCheckedAt: firstAt,
+    lastCheckedAt: latest?.at || null,
+    stale: !latest || now - Date.parse(latest.at) > 15 * 60_000,
+    latest,
+    history,
+    daily,
+    services: Object.fromEntries(
+      STATUS_IDS.map((id) => [id, statusMetricView(aggregate.services[id])])
+    ),
+    totals: {
+      checks: totals.checks,
+      samples: aggregate.samples,
+      expected,
+      coverage: expected
+        ? Math.min(100, Number(((aggregate.samples / expected) * 100).toFixed(2)))
+        : null,
+      availability: aggregate.samples
+        ? Number(((aggregate.availableSamples / aggregate.samples) * 100).toFixed(3))
+        : null,
+      meanLatency: totals.available ? Math.round(totals.latencyTotal / totals.available) : null,
+    },
+    generatedAt: new Date(now).toISOString(),
+  }
+}
+
+async function handleStatusSummary(request) {
+  const blocked = await guardReadRequest(request, 'status-read', 180, 300)
+  if (blocked) return blocked
+  const days = new URL(request.url).searchParams.get('days') === '90' ? 90 : 30
+  try {
+    const runtime = runtimeState()
+    if (runtime.statusCache?.days === days && Date.now() - runtime.statusCache.at < 15_000)
+      return json(runtime.statusCache.data)
+    const data = await readStatusSummary(edgeKv(), days)
+    runtime.statusCache = { days, at: Date.now(), data }
+    return json(data)
+  } catch {
+    return json({ ok: false, error: 'Status storage unavailable' }, 503)
+  }
+}
+
 export default {
   async fetch(request) {
     if (request.method === 'OPTIONS') {
@@ -3348,11 +3729,19 @@ export default {
     const url = new URL(request.url)
     const path = routePath(url)
 
+    if (path === '/status/summary') {
+      if (request.method !== 'GET') return json({ error: 'Use GET' }, 405)
+      return handleStatusSummary(request)
+    }
+    if (path === '/status/ingest') {
+      if (request.method !== 'POST') return json({ error: 'Use POST' }, 405)
+      return handleStatusIngest(request)
+    }
+
     if (path === '/health') {
       return json({
         ok: true,
         service: 'cpe-plus-plus-web',
-        namespace: KV_NAMESPACE,
         build: EDGE_BUILD,
       })
     }

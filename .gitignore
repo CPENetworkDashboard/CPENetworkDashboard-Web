@@ -9,6 +9,8 @@ release-originals/
 !.env.example
 .wrangler/
 .esa/
+.status-reports/
+.status-data/
 .idea/
 .vscode/
 npm-debug.log*
