@@ -30,7 +30,7 @@ const exportMessage = ref('')
 const selectedDay = ref<string | null>(null)
 const selectedService = ref('')
 const workflowUrl =
-  'https://github.com/CPENetworkDashboard/CPENetworkDashboard-Web/actions/workflows/service-status.yml'
+  'https://github.com/CPENetworkDashboard/CPENetworkDashboard-Web/actions/workflows/status-collector.yml'
 const headline = computed(() => {
   if (error.value) return '暂时无法读取服务状态'
   if (!latest.value) return checking.value ? '正在读取检查结果' : '等待首次检查'

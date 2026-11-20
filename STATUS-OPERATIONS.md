@@ -7,8 +7,8 @@
 1. 部署本仓库的 `edge/index.js`，保留现有 `/api/*` 路由和 `cpeweb` namespace。
 2. 在 `cpeweb` 的现有 `config` JSON 中增加 `CPE_STATUS_TOKEN`，值为单独生成的长随机令牌。其他字段保持原值。也支持独立 KV key `CPE_STATUS_TOKEN`。该令牌必须单独配置，不复用 `CPE_STATS_TOKEN`。
 3. 在 GitHub 仓库的 Actions secrets 中增加同名 `CPE_STATUS_TOKEN`，值与上一步一致。不要放入前端环境变量或提交到 Git。
-4. 确认默认分支已包含 `.github/workflows/service-status.yml` 并启用 Actions；当前 `main` 已有该工作流。默认监测地址为 `https://cpe.yuan6.cn`；其他域名可设置 repository variable `CPE_STATUS_ORIGIN`。
-5. 手动运行一次 **Service availability monitoring**，确认 `GET /api/status/summary?days=30` 的 `source` 为 `scheduled-monitor`，`totals.samples` 大于零。
+4. 在默认分支启用 `.github/workflows/status-collector.yml`。默认监测地址为 `https://cpe.yuan6.cn`，可通过仓库变量 `CPE_STATUS_ORIGIN` 修改。
+5. 手动运行一次 **Service availability monitoring**，确认 `GET /api/status/summary?days=30&verify=1` 的 `monitor.runUrl` 对应本次运行。随后验证至少两次 GitHub `schedule` 运行成功，并确认线上摘要的 `monitor.event` 为 `schedule`、最后检查时间持续更新。
 6. 构建并部署 `dist/`。用户即可查看已保存的 30/90 天统计，历史从启用采集时开始积累。
 
 ## 采集任务
