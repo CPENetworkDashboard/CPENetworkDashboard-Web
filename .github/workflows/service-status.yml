@@ -2,7 +2,7 @@ name: Service availability monitoring
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '2-59/5 * * * *'
   workflow_dispatch:
   repository_dispatch:
     types: [status-probe]
