@@ -33,7 +33,7 @@ jobs:
       - name: Validate Linux collector service and timer
         run: |
           bash -n scripts/install-status-monitor.sh
-          systemd-analyze verify deploy/systemd/cpe-status.service deploy/systemd/cpe-status.timer
+          sudo env CPE_NODE="$(command -v node)" bash scripts/install-status-monitor.sh
           systemd-analyze calendar '*-*-* *:02/5:00' --iterations=3
       - name: Test application and persistent status pipeline
         run: npm test
