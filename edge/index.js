@@ -22,7 +22,7 @@
 
 const KV_NAMESPACE = 'cpeweb'
 const LEGACY_KV_NAMESPACES = ['cpe_network_dashboard_web']
-const EDGE_BUILD = '2026-11-19.3'
+const EDGE_BUILD = '2026-11-20.1'
 const STATUS_INTERVAL_MS = 5 * 60 * 1000
 const STATUS_IDS = ['website', 'health', 'releases', 'android', 'windows', 'macos']
 const STATUS_PREFIX = 'status_v1'
@@ -3380,10 +3380,7 @@ async function statusRead(kv, key) {
 
 function statusAggregate(samples) {
   const services = Object.fromEntries(
-    STATUS_IDS.map((id) => [
-      id,
-      { checks: 0, available: 0, slow: 0, failed: 0, latencyTotal: 0, maxLatency: 0 },
-    ])
+    STATUS_IDS.map((id) => [id, { checks: 0, available: 0, failed: 0 }])
   )
   for (const sample of samples) {
     for (const result of sample.services) {
@@ -3391,12 +3388,7 @@ function statusAggregate(samples) {
       if (!metric) continue
       metric.checks += 1
       if (result.state === 'unavailable') metric.failed += 1
-      else {
-        metric.available += 1
-        metric.slow += result.state === 'slow' ? 1 : 0
-        metric.latencyTotal += result.latencyMs
-        metric.maxLatency = Math.max(metric.maxLatency, result.latencyMs)
-      }
+      else metric.available += 1
     }
   }
   return {
@@ -3416,12 +3408,8 @@ function statusMergeMetrics(groups) {
     for (const id of STATUS_IDS) {
       const metric = group.services?.[id]
       if (!metric) continue
-      for (const field of ['checks', 'available', 'slow', 'failed', 'latencyTotal'])
+      for (const field of ['checks', 'available', 'failed'])
         result.services[id][field] += metric[field] || 0
-      result.services[id].maxLatency = Math.max(
-        result.services[id].maxLatency,
-        metric.maxLatency || 0
-      )
     }
   }
   return result
@@ -3429,11 +3417,29 @@ function statusMergeMetrics(groups) {
 
 function statusMetricView(metric) {
   return {
-    ...metric,
+    checks: metric.checks,
+    available: metric.available,
+    failed: metric.failed,
     availability: metric.checks
       ? Number(((metric.available / metric.checks) * 100).toFixed(3))
       : null,
-    meanLatency: metric.available ? Math.round(metric.latencyTotal / metric.available) : null,
+  }
+}
+
+function statusObservationView(sample) {
+  if (!sample) return null
+  return {
+    at: sample.at,
+    slot: sample.slot,
+    services: sample.services.map(({ id, state, httpStatus, checkedAt, version, build }) => ({
+      id,
+      state: state === 'unavailable' ? 'unavailable' : 'operational',
+      httpStatus,
+      checkedAt,
+      detail: state === 'unavailable' ? '检查未通过' : '服务可用',
+      ...(version ? { version } : {}),
+      ...(build ? { build } : {}),
+    })),
   }
 }
 
@@ -3452,23 +3458,13 @@ function normalizeStatusReport(body) {
     if (!['operational', 'slow', 'unavailable'].includes(item.state))
       throw new Error('Invalid service state')
     if (
-      typeof item.latencyMs !== 'number' ||
-      !Number.isFinite(item.latencyMs) ||
-      item.latencyMs < 0 ||
-      item.latencyMs > 60_000
-    )
-      throw new Error('Invalid latency')
-    if (
       item.httpStatus !== null &&
       (!Number.isInteger(item.httpStatus) || item.httpStatus < 100 || item.httpStatus > 599)
     )
       throw new Error('Invalid HTTP status')
     if (
       item.state !== 'unavailable' &&
-      (item.httpStatus === null ||
-        item.httpStatus < 200 ||
-        item.httpStatus >= 300 ||
-        item.latencyMs >= 8000)
+      (item.httpStatus === null || item.httpStatus < 200 || item.httpStatus >= 300)
     )
       throw new Error('Successful samples need a valid HTTP response')
     const version =
@@ -3488,13 +3484,7 @@ function normalizeStatusReport(body) {
       throw new Error('Successful update checks require a valid release version')
     return {
       id: item.id,
-      state:
-        item.state === 'unavailable'
-          ? 'unavailable'
-          : item.latencyMs >= 1500
-            ? 'slow'
-            : 'operational',
-      latencyMs: Math.round(item.latencyMs),
+      state: item.state === 'unavailable' ? 'unavailable' : 'operational',
       httpStatus: item.httpStatus,
       checkedAt: new Date(at).toISOString(),
       detail:
@@ -3552,10 +3542,7 @@ async function storeStatusReports(kv, reports) {
       const metric = (daily.services[id] ||= {
         checks: 0,
         available: 0,
-        slow: 0,
         failed: 0,
-        latencyTotal: 0,
-        maxLatency: 0,
       })
       const result = report.services.find((item) => item.id === id)
       if (!result) continue
@@ -3563,9 +3550,6 @@ async function storeStatusReports(kv, reports) {
       if (result.state === 'unavailable') metric.failed += 1
       else {
         metric.available += 1
-        if (result.state === 'slow') metric.slow += 1
-        metric.latencyTotal += result.latencyMs
-        metric.maxLatency = Math.max(metric.maxLatency, result.latencyMs)
       }
     }
     state.days[date] = daily
@@ -3674,9 +3658,8 @@ async function readStatusSummary(kv, days) {
       checks: sum.checks + metric.checks,
       available: sum.available + metric.available,
       failed: sum.failed + metric.failed,
-      latencyTotal: sum.latencyTotal + metric.latencyTotal,
     }),
-    { checks: 0, available: 0, failed: 0, latencyTotal: 0 }
+    { checks: 0, available: 0, failed: 0 }
   )
   const history = (state.history || [])
     .filter((sample) => Date.parse(sample.at) >= now - 86400_000)
@@ -3692,8 +3675,8 @@ async function readStatusSummary(kv, days) {
     firstCheckedAt: firstAt,
     lastCheckedAt: latest?.at || null,
     stale: !latest || now - Date.parse(latest.at) > 15 * 60_000,
-    latest,
-    history,
+    latest: statusObservationView(latest),
+    history: history.map(statusObservationView),
     daily,
     services: Object.fromEntries(
       STATUS_IDS.map((id) => [id, statusMetricView(aggregate.services[id])])
@@ -3708,7 +3691,6 @@ async function readStatusSummary(kv, days) {
       availability: aggregate.samples
         ? Number(((aggregate.availableSamples / aggregate.samples) * 100).toFixed(3))
         : null,
-      meanLatency: totals.available ? Math.round(totals.latencyTotal / totals.available) : null,
     },
     generatedAt: new Date(now).toISOString(),
   }

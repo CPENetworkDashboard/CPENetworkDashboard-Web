@@ -15,7 +15,7 @@
 
 工作流每 5 分钟运行，使用 Node 24，无需安装 npm 依赖。检查官网 HTML、健康接口、版本列表，以及 Android、Windows、macOS 的实际 `POST /api/updates/check` 请求；响应结构、平台、渠道和下载方式均会校验。每轮把待补传记录合并为一个批次、一次写入 KV，避免边缘副本同步期间连续读改写丢失记录。
 
-本地执行 `node scripts/collect-status.mjs --dry-run` 仅检查、不上传。已在环境中设置 `CPE_STATUS_TOKEN` 时，运行 `node scripts/collect-status.mjs` 会上传。单项响应超过 1.5 秒记为较慢，8 秒超时记为不可用。响应时间代表独立监测节点到服务的耗时。
+本地执行 `node scripts/collect-status.mjs --dry-run` 仅检查、不上传。已在环境中设置 `CPE_STATUS_TOKEN` 时，运行 `node scripts/collect-status.mjs` 会上传。只判断服务可用或不可用，不按响应耗时划分等级。单项检查保留 20 秒连接与读取超时，以便在连接异常时结束请求。
 
 GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。需要更严格的调度保障时，可由现有服务器 cron 调用同一脚本。
 

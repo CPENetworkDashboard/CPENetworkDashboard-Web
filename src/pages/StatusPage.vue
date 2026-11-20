@@ -20,7 +20,6 @@ const {
   stale,
   available,
   build,
-  meanLatency,
   refresh,
   setDays,
   toggleAutoRefresh,
@@ -38,7 +37,6 @@ const headline = computed(() => {
   if (stale.value) return '监测数据更新延迟'
   return {
     operational: '所有服务运行正常',
-    slow: '部分服务响应较慢',
     partial: '部分服务出现异常',
     unavailable: '服务暂时不可用',
     unknown: '等待监测结果',
@@ -51,52 +49,10 @@ const rows = computed(() =>
     metric: summary.value?.services[definition.id],
   }))
 )
-const points = computed(() =>
-  history.value.map((observation) => {
-    const successful = observation.services.filter((service) => service.state !== 'unavailable')
-    return {
-      at: observation.at,
-      latency: successful.length
-        ? Math.round(
-            successful.reduce((sum, service) => sum + service.latencyMs, 0) / successful.length
-          )
-        : null,
-      failed: observation.services.some((service) => service.state === 'unavailable'),
-    }
-  })
-)
-const chartMax = computed(() =>
-  Math.max(
-    100,
-    Math.ceil(Math.max(...points.value.map((point) => point.latency || 0), 0) / 100) * 100
-  )
-)
-const chartStart = computed(
-  () => Date.parse(summary.value?.generatedAt || new Date().toISOString()) - 86400_000
-)
-const chartPoints = computed(() =>
-  points.value.map((point) => ({
-    ...point,
-    x: 12 + Math.max(0, Math.min(1, (Date.parse(point.at) - chartStart.value) / 86400_000)) * 576,
-    y: point.latency === null ? 148 : 148 - (point.latency / chartMax.value) * 120,
-  }))
-)
-const chartLine = computed(() => {
-  let previous = 0
-  return chartPoints.value
-    .map((point) => {
-      if (point.latency === null) {
-        previous = 0
-        return ''
-      }
-      const timestamp = Date.parse(point.at)
-      const segment =
-        (previous && timestamp - previous <= 10 * 60_000 ? 'L' : 'M') + point.x + ',' + point.y
-      previous = timestamp
-      return segment
-    })
-    .join(' ')
-})
+const recentObservations = computed(() => [...history.value].reverse().slice(0, 12))
+function availableServices(observation: (typeof history.value)[number]) {
+  return observation.services.filter((service) => service.state !== 'unavailable').length
+}
 const failedObservations = computed(() =>
   [...history.value]
     .reverse()
@@ -124,16 +80,13 @@ function percent(value?: number | null) {
 }
 function label(value?: string) {
   return value
-    ? ({ operational: '正常', slow: '响应较慢', unavailable: '异常' } as Record<string, string>)[
-        value
-      ] || '待监测'
+    ? ({ operational: '可用', unavailable: '不可用' } as Record<string, string>)[value] || '待监测'
     : '待监测'
 }
 function dayState(day: (typeof daily.value)[number], id: string) {
   const metric = day.services[id]
   if (!metric?.checks) return 'unknown'
   if (metric.failed) return 'unavailable'
-  if (metric.slow) return 'slow'
   if (day.coverage !== null && day.coverage < 80) return 'incomplete'
   return 'operational'
 }
@@ -235,8 +188,10 @@ function exportResults() {
         <dd>{{ percent(summary?.totals.availability) }}</dd>
       </div>
       <div>
-        <dt>平均响应时间</dt>
-        <dd>{{ meanLatency ?? '—' }}<span> ms</span></dd>
+        <dt>当前可用服务</dt>
+        <dd>
+          {{ stale ? '—' : available }}<span> / {{ definitions.length }}</span>
+        </dd>
       </div>
       <div>
         <dt>采集覆盖率</dt>
@@ -301,7 +256,7 @@ function exportResults() {
           <div class="status-component-result">
             <span class="status-pill"
               ><i aria-hidden="true"></i>{{ stale ? '待更新' : label(row.result?.state) }}</span
-            ><span class="status-latency">{{ percent(row.metric?.availability) }}</span>
+            ><span class="status-availability">{{ percent(row.metric?.availability) }}</span>
           </div>
           <div
             class="status-uptime-bars"
@@ -327,7 +282,6 @@ function exportResults() {
       </div>
       <div class="status-legend">
         <span><i data-state="operational"></i>正常</span
-        ><span><i data-state="slow"></i>响应较慢</span
         ><span><i data-state="unavailable"></i>异常</span
         ><span><i data-state="incomplete"></i>采集不完整</span
         ><span><i data-state="unknown"></i>无数据</span>
@@ -340,42 +294,35 @@ function exportResults() {
     <section class="status-session" aria-labelledby="history-title">
       <div class="status-section-top">
         <div>
-          <h2 id="history-title">最近 24 小时响应时间</h2>
-          <p>已保存 {{ history.length }} 轮检查。缺失时段保留空白。</p>
+          <h2 id="history-title">最近检查记录</h2>
+          <p>最近 24 小时已保存 {{ history.length }} 轮检查，以下显示最新 12 轮。</p>
         </div>
         <button type="button" class="status-export" :disabled="!summary" @click="exportResults">
           <SiteIcon name="download" :size="16" />导出历史
         </button>
       </div>
-      <div class="status-chart">
-        <span class="status-chart-max">{{ chartMax }} ms</span
-        ><svg
-          viewBox="0 0 600 170"
-          role="img"
-          aria-label="最近24小时已持久保存的响应时间。红点表示该轮有服务异常；缺失时间不连接。"
-        >
-          <path class="status-chart-grid" d="M12 28H588M12 88H588M12 148H588" />
-          <path class="status-chart-line" :d="chartLine" />
-          <circle
-            v-for="point in chartPoints"
-            :key="point.at"
-            :cx="point.x"
-            :cy="point.y"
-            r="2.5"
-            :class="{ 'has-failure': point.failed }"
+      <ul
+        v-if="recentObservations.length"
+        class="status-observations"
+        aria-label="最近服务可用性检查"
+      >
+        <li v-for="observation in recentObservations" :key="observation.at">
+          <time :datetime="observation.at">{{ time(observation.at, true) }}</time>
+          <span
+            :data-state="
+              availableServices(observation) === definitions.length ? 'operational' : 'unavailable'
+            "
           >
-            <title>
-              {{ time(point.at, true) }} ·
-              {{ point.latency === null ? '请求全部失败' : point.latency + ' ms' }}
-            </title>
-          </circle>
-        </svg>
-        <div v-if="!history.length" class="status-chart-empty">尚无历史监测记录</div>
-        <div class="status-chart-axis">
-          <span>{{ time(new Date(chartStart).toISOString()) }}</span
-          ><span>{{ time(summary?.generatedAt) }}</span>
-        </div>
-      </div>
+            {{
+              availableServices(observation) === definitions.length
+                ? '全部服务可用'
+                : '部分服务不可用'
+            }}
+          </span>
+          <span>{{ availableServices(observation) }} / {{ definitions.length }} 项可用</span>
+        </li>
+      </ul>
+      <p v-else class="status-empty">尚无历史监测记录</p>
       <p class="status-export-message" role="status">{{ exportMessage }}</p>
     </section>
     <section class="status-events">
@@ -405,8 +352,8 @@ function exportResults() {
       <div>
         <strong>监测说明</strong>
         <p>
-          每 5
-          分钟由独立监测任务检查服务，结果持续保存并用于历史统计。可用率按已完成的检查计算，采集覆盖率单独显示；超过
+          独立监测任务按 5 分钟计划运行；GitHub
+          调度可能延迟，页面始终显示实际检查时间。结果持续保存并用于历史统计。可用率按已完成的检查计算，采集覆盖率单独显示；超过
           15 分钟未取得新数据时标记为更新延迟。历史按北京时间汇总。
         </p>
         <p v-if="build">

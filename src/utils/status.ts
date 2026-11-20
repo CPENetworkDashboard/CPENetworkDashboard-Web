@@ -1,4 +1,4 @@
-export type ServiceState = 'operational' | 'slow' | 'unavailable'
+export type ServiceState = 'operational' | 'unavailable'
 export interface ServiceDefinition {
   id: string
   name: string
@@ -10,7 +10,6 @@ export interface ServiceDefinition {
 export interface ServiceResult {
   id: string
   state: ServiceState
-  latencyMs: number
   httpStatus: number | null
   checkedAt: string
   detail: string
@@ -24,10 +23,8 @@ export interface StatusObservation {
 export interface StatusMetric {
   checks: number
   available: number
-  slow: number
   failed: number
   availability: number | null
-  meanLatency: number | null
 }
 export interface StatusDay {
   date: string
@@ -56,7 +53,6 @@ export interface StoredStatusSummary {
     expected: number
     coverage: number | null
     availability: number | null
-    meanLatency: number | null
   }
   generatedAt: string
 }
@@ -125,8 +121,7 @@ export async function checkService(
   const abort = () => controller.abort()
   options.signal?.addEventListener('abort', abort, { once: true })
   if (options.signal?.aborted) controller.abort()
-  const timeout = setTimeout(abort, options.timeoutMs ?? 8000)
-  const started = performance.now()
+  const timeout = setTimeout(abort, options.timeoutMs ?? 20_000)
   let httpStatus: number | null = null
   try {
     const response = await fetcher(definition.path, {
@@ -183,11 +178,9 @@ export async function checkService(
         detail = '健康检查通过'
       }
     }
-    const latencyMs = Math.max(0, Math.round(performance.now() - started))
     return {
       id: definition.id,
-      state: latencyMs >= 1500 ? 'slow' : 'operational',
-      latencyMs,
+      state: 'operational',
       httpStatus,
       checkedAt: new Date().toISOString(),
       detail,
@@ -200,10 +193,9 @@ export async function checkService(
       id: definition.id,
       state: 'unavailable',
       httpStatus,
-      latencyMs: Math.max(0, Math.round(performance.now() - started)),
       checkedAt: new Date().toISOString(),
       detail: controller.signal.aborted
-        ? '8 秒内未完成响应，可检查网络后重试'
+        ? '服务连接超时'
         : error instanceof SyntaxError
           ? '接口返回了无效的 JSON'
           : error instanceof Error && error.message !== 'Failed to fetch'
@@ -218,10 +210,10 @@ export async function checkService(
 
 export function observationState(
   results: ServiceResult[]
-): 'operational' | 'slow' | 'partial' | 'unavailable' | 'unknown' {
+): 'operational' | 'partial' | 'unavailable' | 'unknown' {
   if (!results.length) return 'unknown'
   const available = results.filter((result) => result.state !== 'unavailable')
   if (!available.length) return 'unavailable'
   if (available.length !== results.length) return 'partial'
-  return results.some((result) => result.state === 'slow') ? 'slow' : 'operational'
+  return 'operational'
 }

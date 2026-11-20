@@ -74,10 +74,10 @@ describe('service status probes', () => {
           }) as Response
       )
       const pending = checkService(android, { fetcher })
-      await vi.advanceTimersByTimeAsync(8001)
+      await vi.advanceTimersByTimeAsync(20_001)
       expect(await pending).toMatchObject({
         state: 'unavailable',
-        detail: '8 秒内未完成响应，可检查网络后重试',
+        detail: '服务连接超时',
       })
     } finally {
       vi.useRealTimers()

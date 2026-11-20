@@ -153,4 +153,24 @@ describe('durable status history', () => {
     const response = await edge.fetch(new Request('https://cpe.yuan6.cn/api/status/summary'))
     expect(response.status).toBe(503)
   })
+  it('accepts legacy slow observations as available without publishing latency data', async () => {
+    const observation = report('2026-11-19T10:00:00Z')
+    observation.services.forEach((item) => {
+      item.state = 'slow'
+      item.latencyMs = 12_000
+    })
+    expect((await ingest(observation)).status).toBe(200)
+    const result = await summary()
+    expect(result.latest.services.every((item) => item.state === 'operational')).toBe(true)
+    expect(result.totals.availability).toBe(100)
+    expect(JSON.stringify(result)).not.toMatch(
+      /latencyMs|meanLatency|latencyTotal|maxLatency|"slow"/
+    )
+  })
+  it('accepts availability-only observations without a latency field', async () => {
+    const observation = report('2026-11-19T10:00:00Z')
+    observation.services.forEach((item) => delete item.latencyMs)
+    expect((await ingest(observation)).status).toBe(200)
+    expect((await summary()).totals.samples).toBe(1)
+  })
 })

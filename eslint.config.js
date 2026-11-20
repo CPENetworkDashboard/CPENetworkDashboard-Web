@@ -6,10 +6,21 @@ import prettier from 'eslint-config-prettier'
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'release-originals/**'],
+    ignores: ['dist/**', 'node_modules/**', 'release/**', 'release-originals/**'],
   },
   js.configs.recommended,
   ...vuePlugin.configs['flat/recommended'],
+  {
+    files: ['scripts/*.mjs'],
+    languageOptions: {
+      globals: Object.fromEntries(
+        ['AbortSignal', 'Buffer', 'URL', 'console', 'fetch', 'process', 'setTimeout'].map((key) => [
+          key,
+          'readonly',
+        ])
+      ),
+    },
+  },
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {

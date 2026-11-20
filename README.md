@@ -1,6 +1,6 @@
 # CPE++ Web
 
-CPE加加产品官网。英文名 CPE++，在不能使用符号的场景可写作 CPEPlusPlus。前端使用 Vue 3 + TypeScript + Vite，下载文件放在 `public/downloads`，截图放在 `public/media`，可直接构建后放到阿里云 ESA 静态站点分发。
+CPE加加产品官网。英文名 CPE++，在不能使用符号的场景可写作 CPEPlusPlus。前端使用 Vue 3 + TypeScript + Vite，截图放在 `public/media`。生产构建会校验并打包安装文件，供阿里云 ESA 静态分发。
 
 ## 技术结构
 
@@ -16,8 +16,8 @@ ESA 静态构建产物单文件限制为 25MB。当前发布方式是：
 
 - Android 3.7.1 APK 为 30.3 MiB，按 20MiB 拆成两片；官网在浏览器里合并，应用内更新按接口的 `chunks` 顺序下载合并。旧版小于 25MB 的 APK 继续保留直链。
 - macOS DMG、Windows EXE、Windows MSI、Windows Portable 原始大包不直接放入 `dist`。
-- 大文件按 20MiB 拆到 `public/downloads/chunks/<file-id>/`，前端点击下载时逐片读取并在浏览器中合成为原文件。
-- 原始大文件仅作为 GitHub Release 附件发布；ESA 侧继续使用分片下载，保持当前省成本分发方式。
+- 构建从原 GitHub 仓库的固定提交读取 APK 和现有分片，按 `public/downloads/checksums.txt` 校验每个完整安装包的 SHA-256，再复制到 `dist/downloads`。官网和应用内更新继续使用原下载路径。
+- 首次构建需能访问原仓库的公开下载文件。本地缓存位于 `release/esa-downloads`。发布新版时，同步更新安装文件来源、分片字节数和校验清单。
 
 ## 官网内容结构
 
@@ -27,7 +27,7 @@ ESA 静态构建产物单文件限制为 25MB。当前发布方式是：
 | 产品介绍 | `#/product`   | 排障流程、电脑端截图、手机端截图、平台说明和设备覆盖                                       |
 | 下载     | `#/download`  | 自动识别当前设备并推荐 Android APK、macOS DMG 或 Windows EXE，保留 Portable / MSI 手动选择 |
 | 更新日志 | `#/changelog` | 展开 Android 3.7.1、3.7.0、3.6.5、3.5.3、3.5.2、Android 3.5 旧版、Desktop 3.0.0 等更新记录 |
-| 服务状态 | `#/status`    | 持久化服务状态、30/90 天可用率、每日记录、历史响应曲线与 JSON 导出                         |
+| 服务状态 | `#/status`    | 持久化服务状态、30/90 天可用率、每日记录、可用性检查记录与 JSON 导出                       |
 | 关于     | `#/about`     | 软件名、版本、QQ群、开发者、赞助入口和完整致谢名单                                         |
 
 ## 当前公开下载
@@ -58,13 +58,13 @@ npm run dev
 npm run build
 ```
 
-构建产物在 `dist/`。`public/downloads` 中只保留 APK、校验文件和不超过 25MB 的分片文件，适合直接上传到 ESA 静态资源托管。
+构建产物在 `dist/`，包含已校验的 APK 和单片不超过 20 MiB 的分片。ESA 使用 `npm run build` 与该产物目录。若安装包缺失或校验失败，构建会直接报出对应文件。
 
 开发服务器将 /api/status/\* 交给本地持久化适配器，其余 /api 请求代理到现有官网。生产构建使用同域 /api 与现有 ESA EdgeKV。
 
 ### 服务状态与设计说明
 
-状态页展示独立定时任务保存在现有 cpeweb KV 中的监测记录，包含官网、边缘服务、版本列表及三平台更新检查。支持 30/90 天统计、每日可用性、采集覆盖率、最近 24 小时响应曲线、异常记录和 JSON 导出。页面关闭不影响历史保存或采集。
+状态页展示独立定时任务保存在现有 cpeweb KV 中的监测记录，包含官网、边缘服务、版本列表及三平台更新检查。支持 30/90 天统计、每日可用性、采集覆盖率、最近 24 小时检查记录、异常记录和 JSON 导出。页面关闭不影响历史保存或采集。
 
 新增公开读取接口 GET /api/status/summary 和受独立令牌保护的写入接口 POST /api/status/ingest。采集工作流每 5 分钟运行，需部署新版边缘函数并配置 GitHub Actions secret CPE_STATUS_TOKEN。具体步骤及 KV 数据结构见 [STATUS-OPERATIONS.md](STATUS-OPERATIONS.md)。
 

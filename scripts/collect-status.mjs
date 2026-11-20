@@ -57,16 +57,13 @@ async function main() {
         body: JSON.stringify({
           reports: deliverable.map((entry) => ({
             at: entry.at,
-            services: entry.services.map(
-              ({ id, state, latencyMs, httpStatus, version, build }) => ({
-                id,
-                state,
-                latencyMs,
-                httpStatus,
-                ...(version ? { version } : {}),
-                ...(build ? { build } : {}),
-              })
-            ),
+            services: entry.services.map(({ id, state, httpStatus, version, build }) => ({
+              id,
+              state,
+              httpStatus,
+              ...(version ? { version } : {}),
+              ...(build ? { build } : {}),
+            })),
           })),
         }),
         signal: AbortSignal.timeout(30_000),
@@ -81,7 +78,8 @@ async function main() {
       await persistQueue(path, pending)
       // Do not print request headers, tokens, or raw upstream response bodies.
       throw new Error(
-        'Upload incomplete; ' + pending.length + ' reports retained. ' + error.message
+        'Upload incomplete; ' + pending.length + ' reports retained. ' + error.message,
+        { cause: error }
       )
     }
   }

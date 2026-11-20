@@ -27,12 +27,14 @@ function getDownloadState(fileId: string): DownloadState {
 
 function readChunkBlob(
   url: string,
+  expectedBytes: number,
   onProgress?: (event: { loaded: number; total: number }) => void
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest()
     request.open('GET', url, true)
     request.responseType = 'blob'
+    request.timeout = 180_000
     request.onprogress = (event) => {
       onProgress?.({
         loaded: event.loaded,
@@ -40,13 +42,15 @@ function readChunkBlob(
       })
     }
     request.onload = () => {
-      if (request.status >= 200 && request.status < 300) {
-        resolve(request.response)
-      } else {
-        reject(new Error(`HTTP ${request.status}`))
+      const file = request.response as Blob | null
+      if (request.status !== 200 || !file || file.size !== expectedBytes) {
+        reject(new Error('分片返回的内容不完整'))
+        return
       }
+      resolve(file)
     }
     request.onerror = () => reject(new Error('Network error'))
+    request.ontimeout = () => reject(new Error('下载分片超时'))
     request.send()
   })
 }
@@ -126,11 +130,14 @@ export function useDownloads() {
   }
 
   async function downloadChunkedFile(download: Download): Promise<void> {
-    if (!download.chunks?.length) return
+    const { chunks, chunkBytes } = download
+    if (!chunks?.length || isDownloadBusy(download.id)) return
+    if (chunks.length !== chunkBytes?.length || chunkBytes.some((bytes) => bytes <= 0)) {
+      setDownloadState(download.id, { status: 'error', progress: 0 })
+      return
+    }
 
-    const result = await trackDownload(download.id)
-    applyDownloadTrack(result)
-    const totalBytes = (download.chunkBytes || []).reduce((sum, value) => sum + value, 0)
+    const totalBytes = chunkBytes.reduce((sum, value) => sum + value, 0)
     let loadedBefore = 0
     setDownloadState(download.id, {
       status: 'downloading',
@@ -138,51 +145,37 @@ export function useDownloads() {
       loadedBytes: 0,
       totalBytes,
       currentChunk: 1,
-      chunkCount: download.chunks.length,
+      chunkCount: chunks.length,
     })
+    void handleDownload(download.id)
 
     try {
       const blobs: Blob[] = []
-      for (let index = 0; index < download.chunks.length; index += 1) {
-        const expectedChunkBytes = download.chunkBytes?.[index] || 0
-        const blob = await readChunkBlob(download.chunks[index], ({ loaded, total }) => {
-          const safeTotal =
-            totalBytes || download.chunks!.length * (total || expectedChunkBytes || 1)
-          const safeLoaded = loadedBefore + loaded
-          const progress = safeTotal
-            ? Math.min(99, Math.round((safeLoaded / safeTotal) * 100))
-            : Math.round(((index + 1) / download.chunks!.length) * 100)
+      for (const [index, path] of chunks.entries()) {
+        const expectedBytes = chunkBytes[index]
+        const blob = await readChunkBlob(path, expectedBytes, ({ loaded }) => {
+          const loadedBytes = loadedBefore + Math.min(loaded, expectedBytes)
           setDownloadState(download.id, {
             status: 'downloading',
-            progress,
-            loadedBytes: safeLoaded,
-            totalBytes: safeTotal,
+            progress: Math.min(99, Math.round((loadedBytes / totalBytes) * 100)),
+            loadedBytes,
+            totalBytes,
             currentChunk: index + 1,
-            chunkCount: download.chunks!.length,
+            chunkCount: chunks.length,
           })
         })
 
         blobs.push(blob)
-        loadedBefore += expectedChunkBytes || blob.size || 0
-        setDownloadState(download.id, {
-          status: 'downloading',
-          progress: totalBytes
-            ? Math.min(99, Math.round((loadedBefore / totalBytes) * 100))
-            : Math.round(((index + 1) / download.chunks.length) * 100),
-          loadedBytes: loadedBefore,
-          totalBytes,
-          currentChunk: index + 1,
-          chunkCount: download.chunks.length,
-        })
+        loadedBefore += blob.size
       }
 
       setDownloadState(download.id, {
         status: 'assembling',
         progress: 100,
-        loadedBytes: totalBytes || loadedBefore,
-        totalBytes: totalBytes || loadedBefore,
-        currentChunk: download.chunks.length,
-        chunkCount: download.chunks.length,
+        loadedBytes: loadedBefore,
+        totalBytes,
+        currentChunk: chunks.length,
+        chunkCount: chunks.length,
       })
 
       saveBlob(new Blob(blobs, { type: 'application/octet-stream' }), download.fileName)
@@ -192,7 +185,6 @@ export function useDownloads() {
           setDownloadState(download.id, { status: '', progress: 0 })
         }
       }, 2200)
-      window.setTimeout(loadSummary, 1800)
     } catch {
       setDownloadState(download.id, { status: 'error', progress: 0 })
     }

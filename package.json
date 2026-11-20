@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vue-tsc --noEmit && vite build && npm run prepare:downloads",
+    "prepare:downloads": "node scripts/prepare-downloads.mjs",
+    "verify:deployment": "node scripts/verify-deployment.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "check": "vue-tsc --noEmit",
-    "lint": "eslint src --ext .ts,.vue --fix",
+    "lint": "eslint src scripts --ext .ts,.vue,.mjs",
     "format": "prettier --write src/ edge/ *.md *.ts *.js *.json",
-    "test": "vitest run"
+    "test": "node scripts/prepare-downloads.mjs && vitest run"
   },
   "dependencies": {
     "@vueuse/motion": "^3.0.3",

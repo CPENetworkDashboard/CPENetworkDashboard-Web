@@ -81,7 +81,7 @@ describe('Android 3.7.1 release delivery', () => {
       expect(url.pathname.startsWith('/downloads/chunks/')).toBe(true)
       const href = url.pathname
       expect(decodeURIComponent(href)).toBe(chunk.href)
-      const bytes = readFileSync(resolve('public', `.${decodeURIComponent(href)}`))
+      const bytes = readFileSync(resolve('dist', `.${decodeURIComponent(href)}`))
       expect(bytes.length).toBe(chunk.bytes)
       expect(bytes.length).toBeLessThanOrEqual(20 * 1024 * 1024)
       hash.update(bytes)
@@ -127,7 +127,7 @@ describe('Android 3.7.1 release delivery', () => {
     expect(
       downloads.filter((item) => item.platform === 'Android').map((item) => item.version)
     ).toEqual(['3.7.1', '3.6.5'])
-    expect(existsSync(resolve('public/downloads/CPENetworkDashboard V3.6.5.apk'))).toBe(true)
+    expect(existsSync(resolve('dist/downloads/CPENetworkDashboard V3.6.5.apk'))).toBe(true)
   })
 
   it('rejects retired Android downloads and removes their APK files', async () => {
@@ -139,7 +139,7 @@ describe('Android 3.7.1 release delivery', () => {
     ]) {
       const response = await edge.fetch(new Request(`${origin}/api/download?file=${id}`))
       expect(response.status).toBe(404)
-      expect(existsSync(resolve('public/downloads', fileName))).toBe(false)
+      expect(existsSync(resolve('dist/downloads', fileName))).toBe(false)
     }
   })
 })

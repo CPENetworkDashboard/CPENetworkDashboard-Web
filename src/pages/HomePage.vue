@@ -120,7 +120,7 @@ const platforms = computed(() =>
       <div>
         <SiteIcon name="activity" :size="24" />
         <h2>服务运行记录</h2>
-        <p>查看各项服务的可用率、响应时间与历史记录。</p>
+        <p>查看各项服务的可用率、采集覆盖与历史记录。</p>
       </div>
       <RouterLink class="action secondary" to="/status">打开服务状态</RouterLink>
     </section>

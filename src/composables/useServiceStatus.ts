@@ -26,16 +26,15 @@ export function useServiceStatus() {
     () => results.value.filter((item) => item.state !== 'unavailable').length
   )
   const build = computed(() => results.value.find((item) => item.id === 'health')?.build)
-  const meanLatency = computed(() => summary.value?.totals.meanLatency ?? null)
 
-  async function refresh() {
+  async function load(requestedDays: 30 | 90) {
     if (checking.value || disposed) return
     checking.value = true
     error.value = ''
     controller = new AbortController()
     const timeout = setTimeout(() => controller?.abort(), 15_000)
     try {
-      const response = await fetch(API_BASE + '/status/summary?days=' + days.value, {
+      const response = await fetch(API_BASE + '/status/summary?days=' + requestedDays, {
         headers: { Accept: 'application/json' },
         cache: 'no-store',
         signal: controller.signal,
@@ -50,6 +49,7 @@ export function useServiceStatus() {
       if (
         data.ok !== true ||
         data.source !== 'scheduled-monitor' ||
+        data.windowDays !== requestedDays ||
         !Array.isArray(data.daily) ||
         !Array.isArray(data.history) ||
         !data.totals
@@ -57,20 +57,24 @@ export function useServiceStatus() {
         throw new Error('状态服务返回的数据格式不正确。')
       if (!disposed) {
         summary.value = data
-        countdown.value = 60
-        now.value = Date.now()
+        days.value = requestedDays
       }
     } catch (cause) {
       if (!disposed) error.value = cause instanceof Error ? cause.message : '无法读取监测记录。'
     } finally {
       clearTimeout(timeout)
-      if (!disposed) checking.value = false
+      if (!disposed) {
+        countdown.value = 60
+        now.value = Date.now()
+        checking.value = false
+      }
     }
   }
+  function refresh() {
+    return load(days.value)
+  }
   async function setDays(value: 30 | 90) {
-    if (checking.value || days.value === value) return
-    days.value = value
-    await refresh()
+    if (days.value !== value) await load(value)
   }
   function toggleAutoRefresh() {
     autoRefresh.value = !autoRefresh.value
@@ -105,7 +109,6 @@ export function useServiceStatus() {
     stale,
     available,
     build,
-    meanLatency,
     refresh,
     setDays,
     toggleAutoRefresh,
