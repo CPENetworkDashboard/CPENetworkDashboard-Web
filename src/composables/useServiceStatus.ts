@@ -19,11 +19,22 @@ export function useServiceStatus() {
   const daily = computed(() => summary.value?.daily || [])
   const latest = computed(() => summary.value?.latest || null)
   const stale = computed(
-    () => !latest.value || now.value - Date.parse(latest.value.at) > 15 * 60_000
+    () =>
+      !latest.value ||
+      summary.value?.stale === true ||
+      !Number.isFinite(Date.parse(latest.value.at)) ||
+      now.value - Date.parse(latest.value.at) > 15 * 60_000
   )
-  const state = computed(() => observationState(results.value))
+  const state = computed(() =>
+    stale.value || error.value || results.value.length !== definitions.length
+      ? 'unknown'
+      : observationState(results.value)
+  )
   const available = computed(
-    () => results.value.filter((item) => item.state !== 'unavailable').length
+    () => results.value.filter((item) => item.state === 'operational').length
+  )
+  const ageSeconds = computed(() =>
+    latest.value ? Math.max(0, Math.floor((now.value - Date.parse(latest.value.at)) / 1000)) : null
   )
   const build = computed(() => results.value.find((item) => item.id === 'health')?.build)
 
@@ -52,7 +63,19 @@ export function useServiceStatus() {
         data.windowDays !== requestedDays ||
         !Array.isArray(data.daily) ||
         !Array.isArray(data.history) ||
-        !data.totals
+        !data.totals ||
+        !data.services ||
+        (data.latest &&
+          (!Number.isFinite(Date.parse(data.latest.at)) ||
+            !Array.isArray(data.latest.services) ||
+            data.latest.services.length !== definitions.length ||
+            definitions.some(
+              (definition) =>
+                data.latest.services.filter(
+                  (item: { id: string; state: string }) =>
+                    item.id === definition.id && ['operational', 'unavailable'].includes(item.state)
+                ).length !== 1
+            )))
       )
         throw new Error('状态服务返回的数据格式不正确。')
       if (!disposed) {
@@ -79,8 +102,13 @@ export function useServiceStatus() {
   function toggleAutoRefresh() {
     autoRefresh.value = !autoRefresh.value
   }
+  function onVisible() {
+    now.value = Date.now()
+    if (!document.hidden && autoRefresh.value) void refresh()
+  }
   onMounted(() => {
     void refresh()
+    document.addEventListener('visibilitychange', onVisible)
     timer = setInterval(() => {
       now.value = Date.now()
       if (!autoRefresh.value || checking.value || document.hidden) return
@@ -89,6 +117,7 @@ export function useServiceStatus() {
     }, 1000)
   })
   onUnmounted(() => {
+    document.removeEventListener('visibilitychange', onVisible)
     disposed = true
     controller?.abort()
     if (timer) clearInterval(timer)
@@ -109,6 +138,7 @@ export function useServiceStatus() {
     stale,
     available,
     build,
+    ageSeconds,
     refresh,
     setDays,
     toggleAutoRefresh,

@@ -43,6 +43,16 @@ export interface StoredStatusSummary {
   firstCheckedAt: string | null
   lastCheckedAt: string | null
   stale: boolean
+  monitor?: {
+    lastReceivedAt: string | null
+    ageSeconds: number | null
+    nextExpectedAt: string | null
+    missedSlots: number
+    source: 'github-actions' | 'external' | 'legacy'
+    event: string
+    runUrl: string | null
+    samples24h: number
+  }
   latest: StatusObservation | null
   history: StatusObservation[]
   daily: StatusDay[]

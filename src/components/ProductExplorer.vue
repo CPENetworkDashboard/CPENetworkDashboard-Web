@@ -112,8 +112,12 @@ onUnmounted(closePreview)
     </div>
     <div class="explorer-body">
       <div class="explorer-copy" aria-live="polite" aria-atomic="true">
-        <h3>{{ current.title }}</h3>
-        <p>{{ current.copy }}</p>
+        <Transition name="explorer-copy-change" mode="out-in"
+          ><div :key="selected">
+            <h3>{{ current.title }}</h3>
+            <p>{{ current.copy }}</p>
+          </div></Transition
+        >
         <ul class="explorer-tags" aria-label="相关功能">
           <li v-for="tag in current.tags" :key="tag">{{ tag }}</li>
         </ul>

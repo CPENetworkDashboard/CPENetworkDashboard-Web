@@ -52,9 +52,9 @@ async function ingestBatch(reports, token = 'monitor-test-token') {
     })
   )
 }
-async function summary(days = 30) {
+async function summary(days = 30, query = '') {
   const response = await edge.fetch(
-    new Request('https://cpe.yuan6.cn/api/status/summary?days=' + days)
+    new Request('https://cpe.yuan6.cn/api/status/summary?days=' + days + query)
   )
   expect(response.status).toBe(200)
   return response.json()
@@ -102,6 +102,17 @@ describe('durable status history', () => {
     expect(result.totals.samples).toBe(1)
     expect(result.latest.at).toBe(new Date(observation.at).toISOString())
     expect(result.latest.services.find((service) => service.id === 'android').version).toBe('3.7.1')
+  })
+  it('bypasses the 15-second local summary cache for explicit history verification', async () => {
+    await ingest(report('2026-11-19T10:00:00Z'))
+    const runtime = globalThis.__CPE_PLUS_PLUS_EDGE_RUNTIME__
+    runtime.statusCache = { days: 30, at: Date.now(), data: { ok: true, cached: true } }
+
+    expect(await summary()).toEqual({ ok: true, cached: true })
+    const verified = await summary(30, '&verify=1')
+    expect(verified.history).toHaveLength(1)
+    expect(verified.totals.samples).toBe(1)
+    expect(runtime.statusCache.data).toEqual({ ok: true, cached: true })
   })
   it('stores a backfill batch in one write without overwriting earlier reports', async () => {
     const observations = [report('2026-11-19T10:00:00Z'), report('2026-11-19T10:05:00Z', true)]
@@ -172,5 +183,37 @@ describe('durable status history', () => {
     observation.services.forEach((item) => delete item.latencyMs)
     expect((await ingest(observation)).status).toBe(200)
     expect((await summary()).totals.samples).toBe(1)
+  })
+  it('exposes collector freshness and validated workflow provenance independently of service availability', async () => {
+    const observation = report('2026-11-19T10:00:00Z')
+    observation.monitor = {
+      source: 'github-actions',
+      event: 'schedule',
+      runUrl: 'https://github.com/CPENetworkDashboard/CPENetworkDashboard-Web/actions/runs/123',
+    }
+    await ingest(observation)
+    const result = await summary()
+    expect(result.monitor).toMatchObject({
+      source: 'github-actions',
+      event: 'schedule',
+      ageSeconds: 720,
+      missedSlots: 1,
+      runUrl: observation.monitor.runUrl,
+      samples24h: 1,
+    })
+    expect(result.latest.monitor).toMatchObject({ source: 'github-actions', event: 'schedule' })
+    expect(result.totals.availability).toBe(100)
+    vi.advanceTimersByTime(4 * 60_000)
+    expect((await summary()).stale).toBe(true)
+  })
+  it('does not publish untrusted collector URLs', async () => {
+    const observation = report('2026-11-19T10:00:00Z')
+    observation.monitor = {
+      source: 'github-actions',
+      event: 'schedule',
+      runUrl: 'https://untrusted.example/collect',
+    }
+    await ingest(observation)
+    expect((await summary()).monitor.runUrl).toBeNull()
   })
 })

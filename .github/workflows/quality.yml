@@ -1,0 +1,43 @@
+name: Website quality and deployment
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: website-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: release/esa-downloads
+          key: verified-downloads-9ca8af38-v1
+      - name: Check types
+        run: npm run check
+      - name: Check code
+        run: npm run lint
+      - name: Test application and persistent status pipeline
+        run: npm test
+      - name: Build and verify release files
+        run: npm run build
+      - name: Wait for ESA and verify production APIs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CPE_STATUS_ORIGIN: ${{ vars.CPE_STATUS_ORIGIN || 'https://cpe.yuan6.cn' }}
+        run: |
+          node scripts/wait-for-deployment.mjs
+          node scripts/verify-deployment.mjs --skip-downloads

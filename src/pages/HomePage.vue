@@ -28,10 +28,10 @@ const platforms = computed(() =>
         <RouterLink class="release-note" to="/changelog"
           ><span>Android 3.7.1</span>正式版现已发布</RouterLink
         >
-        <h1 id="home-title">CPE 网络管理<br />与诊断工具。</h1>
+        <h1 id="home-title">看清网络状态，<br />掌握你的 CPE。</h1>
         <p>
-          面向 4G / 5G CPE 的跨平台管理软件。集中查看网络状态、管理频段与小区，并通过测速、Ping
-          和路由追踪完成链路诊断。
+          为 4G / 5G CPE
+          提供统一的监测与调试界面。从信号、小区到链路测试，把网络问题定位到具体环节。
         </p>
         <div class="landing-actions">
           <RouterLink class="action primary" to="/download"
@@ -55,8 +55,10 @@ const platforms = computed(() =>
     </section>
     <section class="landing-workflow content-width" data-reveal aria-labelledby="workflow-title">
       <div class="landing-section-heading">
-        <h2 id="workflow-title">网络监测、设备管理<br />与链路诊断。</h2>
-        <p>以统一的工作界面完成日常排查。<br />关键指标、配置操作与测试结果集中呈现。</p>
+        <h2 id="workflow-title">从发现问题，<br />到验证调整结果。</h2>
+        <p>
+          观察连接与射频状态，回读频段配置，再用测试验证链路。<br />每一步都对应真实的设备数据。
+        </p>
       </div>
       <ProductExplorer />
     </section>
@@ -119,8 +121,8 @@ const platforms = computed(() =>
     <section class="landing-status content-width" data-reveal>
       <div>
         <SiteIcon name="activity" :size="24" />
-        <h2>服务运行记录</h2>
-        <p>查看各项服务的可用率、采集覆盖与历史记录。</p>
+        <h2>官网与更新服务</h2>
+        <p>查看服务是否可用，以及已保存的检查记录。</p>
       </div>
       <RouterLink class="action secondary" to="/status">打开服务状态</RouterLink>
     </section>

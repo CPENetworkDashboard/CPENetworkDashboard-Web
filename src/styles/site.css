@@ -2071,6 +2071,7 @@ p {
 
 .timeline-body {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .timeline-body > p {
@@ -2096,9 +2097,15 @@ p {
 
 .timeline-body ul {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin: 0;
   padding-left: 18px;
+}
+
+.timeline-body li {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .about-page {

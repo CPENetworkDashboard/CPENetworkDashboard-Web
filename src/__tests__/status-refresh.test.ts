@@ -43,6 +43,53 @@ async function setup() {
 }
 
 describe('status refresh reliability', () => {
+  it('treats an expired successful sample as unknown current state', async () => {
+    const ids = ['website', 'health', 'releases', 'android', 'windows', 'macos']
+    fetcher.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          source: 'scheduled-monitor',
+          windowDays: 30,
+          daily: [],
+          history: [],
+          services: {},
+          totals: { samples: 1 },
+          stale: true,
+          latest: {
+            at: new Date(Date.now() - 20 * 60000).toISOString(),
+            services: ids.map((id) => ({ id, state: 'operational', httpStatus: 200 })),
+          },
+        })
+      )
+    )
+    await setup()
+    expect(status.stale.value).toBe(true)
+    expect(status.state.value).toBe('unknown')
+    expect(status.available.value).toBe(6)
+  })
+  it('rejects duplicate or incomplete service IDs instead of showing a false healthy state', async () => {
+    fetcher.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          source: 'scheduled-monitor',
+          windowDays: 30,
+          daily: [],
+          history: [],
+          services: {},
+          totals: { samples: 1 },
+          latest: {
+            at: new Date().toISOString(),
+            services: Array.from({ length: 6 }, () => ({ id: 'website', state: 'operational' })),
+          },
+        })
+      )
+    )
+    await setup()
+    expect(status.state.value).toBe('unknown')
+    expect(status.error.value).toContain('数据格式')
+  })
   it('waits a minute before retrying a failed refresh', async () => {
     fetcher.mockRejectedValue(new Error('offline'))
     await setup()

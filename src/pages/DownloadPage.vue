@@ -51,10 +51,10 @@ const versionRows = computed(() => {
   <section class="page-view download-page">
     <header class="page-heading compact-heading">
       <p>下载</p>
-      <h1>按当前设备下载 CPE加加 对应版本。</h1>
+      <h1>选择设备，开始使用 CPE加加。</h1>
       <span>
-        页面会自动识别 Android、macOS 或
-        Windows。较大的安装包会自动下载并合并，过程中可以看到实时进度，最后保存完整安装包。
+        支持 Android、macOS 和
+        Windows。已根据当前设备推荐版本，也可以手动切换。下载过程中会显示进度，并自动合并为完整安装包。
       </span>
     </header>
 

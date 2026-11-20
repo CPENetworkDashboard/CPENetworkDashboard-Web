@@ -5,12 +5,27 @@ import { downloads } from '../src/content.ts'
 const origin = new URL(process.env.CPE_STATUS_ORIGIN || 'https://cpe.yuan6.cn')
 const output = []
 async function get(path, init = {}) {
-  const response = await fetch(new URL(path, origin), {
-    signal: AbortSignal.timeout(90_000),
-    ...init,
-    headers: { 'Cache-Control': 'no-cache', ...init.headers },
-  })
-  return response
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(new URL(path, origin), {
+        signal: AbortSignal.timeout(90_000),
+        ...init,
+        headers: { 'Cache-Control': 'no-cache', ...init.headers },
+      })
+      if (
+        attempt < 3 &&
+        (response.status === 408 || response.status === 429 || response.status >= 500)
+      ) {
+        await response.body?.cancel()
+        await new Promise((done) => setTimeout(done, attempt * 1000))
+        continue
+      }
+      return response
+    } catch (error) {
+      if (attempt === 3) throw error
+      await new Promise((done) => setTimeout(done, attempt * 1000))
+    }
+  }
 }
 async function json(path, init) {
   const response = await get(path, init)
@@ -63,6 +78,12 @@ for (const days of [30, 90]) {
   assert.equal(summary.windowDays, days)
   assert.doesNotMatch(JSON.stringify(summary), /latencyMs|meanLatency|latencyTotal|maxLatency/)
   assert.ok(summary.totals.samples > 0, 'No persisted observations')
+  if (process.argv.includes('--require-fresh'))
+    assert.equal(
+      summary.stale,
+      false,
+      'Collector is not updating; latest observation: ' + summary.lastCheckedAt
+    )
   output.push({
     check: days + '-day persistent availability',
     ok: true,
@@ -80,16 +101,22 @@ if (!process.argv.includes('--skip-downloads')) {
       const paths = download.chunks || [download.href]
       let total = 0
       for (const [index, path] of paths.entries()) {
-        const response = await get(path, { redirect: 'error' })
-        assert.equal(response.status, 200, download.id + ' part ' + index)
-        assert.ok(!response.headers.get('content-type')?.includes('text/html'))
-        let bytes = 0
-        for await (const data of response.body) {
-          bytes += data.length
-          hash.update(data)
+        let data
+        for (let attempt = 1; attempt <= 3; attempt += 1) {
+          try {
+            const response = await get(path, { redirect: 'error' })
+            assert.equal(response.status, 200, download.id + ' part ' + index)
+            assert.ok(!response.headers.get('content-type')?.includes('text/html'))
+            data = Buffer.from(await response.arrayBuffer())
+            if (download.chunkBytes) assert.equal(data.length, download.chunkBytes[index], path)
+            break
+          } catch (error) {
+            if (attempt === 3) throw error
+            await new Promise((done) => setTimeout(done, attempt * 1000))
+          }
         }
-        if (download.chunkBytes) assert.equal(bytes, download.chunkBytes[index], path)
-        total += bytes
+        hash.update(data)
+        total += data.length
       }
       assert.equal(hash.digest('hex'), download.checksum, download.id + ' SHA-256')
       output.push({

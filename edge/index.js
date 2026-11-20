@@ -22,7 +22,7 @@
 
 const KV_NAMESPACE = 'cpeweb'
 const LEGACY_KV_NAMESPACES = ['cpe_network_dashboard_web']
-const EDGE_BUILD = '2026-11-20.1'
+const EDGE_BUILD = '2026-11-20.2'
 const STATUS_INTERVAL_MS = 5 * 60 * 1000
 const STATUS_IDS = ['website', 'health', 'releases', 'android', 'windows', 'macos']
 const STATUS_PREFIX = 'status_v1'
@@ -3416,6 +3416,7 @@ function statusMergeMetrics(groups) {
 }
 
 function statusMetricView(metric) {
+  metric ||= { checks: 0, available: 0, failed: 0 }
   return {
     checks: metric.checks,
     available: metric.available,
@@ -3431,6 +3432,7 @@ function statusObservationView(sample) {
   return {
     at: sample.at,
     slot: sample.slot,
+    ...(sample.monitor ? { monitor: sample.monitor } : {}),
     services: sample.services.map(({ id, state, httpStatus, checkedAt, version, build }) => ({
       id,
       state: state === 'unavailable' ? 'unavailable' : 'operational',
@@ -3501,6 +3503,24 @@ function normalizeStatusReport(body) {
     at: new Date(at).toISOString(),
     slot: Math.floor(at / STATUS_INTERVAL_MS),
     source: 'scheduled-http-monitor',
+    monitor: {
+      source:
+        body.monitor?.source === 'github-actions'
+          ? 'github-actions'
+          : body.monitor?.source === 'external'
+            ? 'external'
+            : 'legacy',
+      event: ['schedule', 'workflow_dispatch', 'repository_dispatch', 'external'].includes(
+        body.monitor?.event
+      )
+        ? body.monitor.event
+        : 'unknown',
+      ...(/^https:\/\/github\.com\/CPENetworkDashboard\/CPENetworkDashboard-Web\/actions\/runs\/\d+$/.test(
+        body.monitor?.runUrl || ''
+      )
+        ? { runUrl: body.monitor.runUrl }
+        : {}),
+    },
     services,
   }
 }
@@ -3576,6 +3596,7 @@ async function storeStatusReports(kv, reports) {
     if (storedDate < oldestDate) delete state.days[storedDate]
 
   // A single atomic KV value keeps ingestion and reads within a small operation budget.
+  state.receivedAt = new Date(now).toISOString()
   await kvPutText(kv, key, JSON.stringify(state))
   runtimeState().statusCache = null
   const last = reports[reports.length - 1]
@@ -3675,6 +3696,20 @@ async function readStatusSummary(kv, days) {
     firstCheckedAt: firstAt,
     lastCheckedAt: latest?.at || null,
     stale: !latest || now - Date.parse(latest.at) > 15 * 60_000,
+    monitor: {
+      lastReceivedAt: state.receivedAt || null,
+      ageSeconds: latest ? Math.max(0, Math.floor((now - Date.parse(latest.at)) / 1000)) : null,
+      nextExpectedAt: latest
+        ? new Date(Date.parse(latest.at) + STATUS_INTERVAL_MS).toISOString()
+        : null,
+      missedSlots: latest
+        ? Math.max(0, currentSlot - Math.floor(Date.parse(latest.at) / STATUS_INTERVAL_MS) - 1)
+        : 0,
+      source: latest?.monitor?.source || 'legacy',
+      event: latest?.monitor?.event || 'unknown',
+      runUrl: latest?.monitor?.runUrl || null,
+      samples24h: history.length,
+    },
     latest: statusObservationView(latest),
     history: history.map(statusObservationView),
     daily,
@@ -3699,13 +3734,21 @@ async function readStatusSummary(kv, days) {
 async function handleStatusSummary(request) {
   const blocked = await guardReadRequest(request, 'status-read', 180, 300)
   if (blocked) return blocked
-  const days = new URL(request.url).searchParams.get('days') === '90' ? 90 : 30
+  const url = new URL(request.url)
+  const days = url.searchParams.get('days') === '90' ? 90 : 30
+  const bypassCache =
+    url.searchParams.get('verify') === '1' ||
+    request.headers.get('Cache-Control')?.toLowerCase().includes('no-cache')
   try {
     const runtime = runtimeState()
-    if (runtime.statusCache?.days === days && Date.now() - runtime.statusCache.at < 15_000)
+    if (
+      !bypassCache &&
+      runtime.statusCache?.days === days &&
+      Date.now() - runtime.statusCache.at < 15_000
+    )
       return json(runtime.statusCache.data)
     const data = await readStatusSummary(edgeKv(), days)
-    runtime.statusCache = { days, at: Date.now(), data }
+    if (!bypassCache) runtime.statusCache = { days, at: Date.now(), data }
     return json(data)
   } catch {
     return json({ ok: false, error: 'Status storage unavailable' }, 503)

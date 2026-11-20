@@ -1627,3 +1627,116 @@ section[id] {
     left: 23%;
   }
 }
+
+/* Product presentation refinements; retain the application's existing palette. */
+.explorer-copy > div > p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.9;
+  max-width: 33em;
+  margin: 0 0 22px;
+}
+.explorer-copy > div > h3 {
+  font-size: clamp(24px, 2.8vw, 34px);
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+  margin: 0 0 16px;
+  font-weight: 600;
+}
+.download-switcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.download-switcher button {
+  min-width: 0;
+  min-height: 64px;
+  padding: 10px;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.download-switcher button.active {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.download-switcher button small {
+  line-height: 1.5;
+}
+.timeline-entry {
+  min-width: 0;
+}
+.timeline-body li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.landing-status {
+  gap: 24px;
+}
+.landing-status > div {
+  min-width: 0;
+}
+.landing-status > .action {
+  max-width: 100%;
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .landing-status > .action {
+    margin-left: 0;
+    width: 100%;
+  }
+  .stage-orbit {
+    left: 0;
+    right: 0;
+  }
+  .landing-actions {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .download-switcher {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .detect-panel h2 {
+    font-size: 21px;
+    line-height: 1.45;
+  }
+  .timeline-date {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+  }
+  .timeline-date strong,
+  .timeline-date small {
+    margin: 0;
+  }
+  .timeline-date span {
+    flex-basis: 100%;
+  }
+  .timeline-entry {
+    gap: 22px;
+    padding: 28px 0;
+  }
+  .timeline-body > p {
+    font-size: 16px;
+  }
+  .timeline-body h2 {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .explorer-copy-change-enter-active,
+  .explorer-copy-change-leave-active {
+    transition:
+      opacity 0.16s,
+      transform 0.16s;
+  }
+  .explorer-copy-change-enter-from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  .explorer-copy-change-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
