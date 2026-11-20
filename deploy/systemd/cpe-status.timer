@@ -1,0 +1,13 @@
+[Unit]
+Description=Check CPE service availability every five minutes
+
+[Timer]
+OnBootSec=30s
+OnCalendar=*-*-* *:02/5:00
+AccuracySec=1s
+RandomizedDelaySec=5s
+Persistent=yes
+Unit=cpe-status.service
+
+[Install]
+WantedBy=timers.target

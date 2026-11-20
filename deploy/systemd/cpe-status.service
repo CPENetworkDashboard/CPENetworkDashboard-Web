@@ -1,0 +1,31 @@
+[Unit]
+Description=CPE service availability collector
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=240
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+StateDirectory=cpe-status
+StateDirectoryMode=0700
+WorkingDirectory=/var/lib/cpe-status
+EnvironmentFile=/etc/cpe-status/collector.env
+Environment=CPE_STATUS_QUEUE=/var/lib/cpe-status/pending.json
+ExecStart=/usr/bin/node /opt/cpe-status/scripts/collect-status.mjs
+TimeoutStartSec=240
+Restart=on-failure
+RestartSec=30s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=

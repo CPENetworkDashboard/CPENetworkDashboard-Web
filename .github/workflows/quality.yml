@@ -30,6 +30,11 @@ jobs:
         run: npm run check
       - name: Check code
         run: npm run lint
+      - name: Validate Linux collector service and timer
+        run: |
+          bash -n scripts/install-status-monitor.sh
+          systemd-analyze verify deploy/systemd/cpe-status.service deploy/systemd/cpe-status.timer
+          systemd-analyze calendar '*-*-* *:02/5:00' --iterations=3
       - name: Test application and persistent status pipeline
         run: npm test
       - name: Build and verify release files

@@ -19,6 +19,32 @@
 
 GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。需要更严格的调度保障时，可由现有服务器 cron 调用同一脚本。
 
+## Linux 服务器采集
+
+安装包内的 `deploy/systemd/` 提供独立服务器方案。需要 Linux、systemd 与系统目录中的 Node 24+。安装器不安装 npm 依赖，不改变网站和 EdgeKV 中已有数据。
+
+```bash
+sudo bash scripts/install-status-monitor.sh
+sudoedit /etc/cpe-status/collector.env
+# 填入现有 EdgeKV 的 CPE_STATUS_TOKEN，保留默认监测域名。
+sudo bash scripts/install-status-monitor.sh --enable
+```
+
+默认程序目录 `/opt/cpe-status`；安装时可设置 `CPE_INSTALL_DIR` 和 `CPE_NODE`，例如 `sudo CPE_NODE=/usr/local/bin/node bash scripts/install-status-monitor.sh`。Node 与程序均须位于 `/home`、`/root` 之外。更新时重跑安装器即可，配置和历史队列都会保留。
+
+服务使用 systemd 动态用户；令牌文件为 root 所有、权限 0600，队列写入持久目录 `/var/lib/cpe-status/`。每小时第 2、7、12…57 分钟运行；重启后补一次触发。单次失败自动重试，后续周期继续补传。服务在同一时间只执行一个进程，网站不可用时也会保存真实失败结果。
+
+```bash
+sudo systemctl list-timers --all cpe-status.timer
+sudo systemctl status cpe-status.service cpe-status.timer --no-pager
+sudo journalctl -u cpe-status.service --since '1 hour ago' --no-pager
+curl -fsS 'https://cpe.yuan6.cn/api/status/summary?days=30&verify=1'
+```
+
+切换验收：先在 GitHub 禁用 **Service availability monitoring**，避免两个采集器同时写入；启动服务器服务后，确认连续两轮检查均保存成功、`monitor.source` 为 `external`、`stale` 为 `false`，并核对历史样本增加。再删除 GitHub 工作流中的 `schedule` 并重新启用该工作流，保留手动检查和外部触发入口。若服务器部署失败，重新启用 GitHub 工作流以保留原有能力；已有历史不做清空。
+
+停用服务器任务时执行 `sudo systemctl disable --now cpe-status.timer`；记录与令牌保留。需要即时采集可执行 `sudo systemctl start cpe-status.service`。
+
 ## 数据与接口
 
 | 接口                              | 权限                                       | 用途                                 |

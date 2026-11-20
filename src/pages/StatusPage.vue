@@ -231,7 +231,8 @@ function exportResults() {
           <span>最近来源</span><strong>{{ lastEvent }}</strong>
         </div>
         <a :href="summary?.monitor?.runUrl || workflowUrl" target="_blank" rel="noopener noreferrer"
-          >查看采集任务<SiteIcon name="github" :size="16"
+          >{{ summary?.monitor?.source === 'external' ? '手动检查工作流' : '查看采集任务'
+          }}<SiteIcon name="github" :size="16"
         /></a>
       </aside>
     </div>
