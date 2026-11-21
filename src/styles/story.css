@@ -637,15 +637,19 @@
   gap: 2px;
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
   transform: translateY(-50%) translateX(-8px);
   transition:
     opacity 0.3s,
-    transform 0.3s;
+    transform 0.3s,
+    visibility 0s 0.3s;
 }
 .story-rail.show {
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
   transform: translateY(-50%);
+  transition-delay: 0s;
 }
 .story-rail button {
   display: flex;
