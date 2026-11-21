@@ -1,4 +1,5 @@
 ﻿<script setup lang="ts">
+import 'leaflet/dist/leaflet.css'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { downloads } from '@/content'

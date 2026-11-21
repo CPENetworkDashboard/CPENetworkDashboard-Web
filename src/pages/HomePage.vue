@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import ProductExplorer from '@/components/ProductExplorer.vue'
+import ProductStory from '@/components/story/ProductStory.vue'
 import SiteIcon from '@/components/SiteIcon.vue'
 import { downloads, supportedDevices } from '@/content'
-import ProductStage from '@/components/ProductStage.vue'
 import { useProductMotion } from '@/composables/useProductMotion'
+
 const page = ref<HTMLElement | null>(null)
 useProductMotion(page)
 
@@ -19,112 +19,53 @@ const platforms = computed(() =>
     version: downloads.find((download) => download.id === platform.id)?.version,
   }))
 )
+const vendors = supportedDevices.map(([brand, models]) => {
+  const [en, zh] = brand.split(' / ')
+  return { en, zh, models }
+})
 </script>
 
 <template>
-  <div ref="page" class="landing">
-    <section class="landing-hero content-width" aria-labelledby="home-title">
-      <div class="landing-hero-copy">
-        <RouterLink class="release-note" to="/changelog"
-          ><span>Android 3.7.1</span>正式版现已发布</RouterLink
-        >
-        <h1 id="home-title">看清网络状态，<br />掌握你的 CPE。</h1>
-        <p>
-          为 4G / 5G CPE
-          提供统一的监测与调试界面。从信号、小区到链路测试，把网络问题定位到具体环节。
-        </p>
-        <div class="landing-actions">
-          <RouterLink class="action primary" to="/download"
-            ><SiteIcon name="download" :size="18" />下载 CPE加加</RouterLink
-          ><RouterLink class="landing-text-link" to="/product">了解产品功能</RouterLink>
+  <div ref="page" class="home">
+    <ProductStory :versions="platforms" />
+
+    <section class="home-devices content-width" aria-labelledby="devices-title">
+      <header data-reveal>
+        <h2 id="devices-title">已适配的设备</h2>
+        <RouterLink :to="{ path: '/product', hash: '#devices' }"
+          >完整列表<SiteIcon name="chevron" :size="14"
+        /></RouterLink>
+      </header>
+      <dl data-reveal>
+        <div v-for="vendor in vendors" :key="vendor.en">
+          <dt>
+            <strong>{{ vendor.zh }}</strong
+            ><span>{{ vendor.en }}</span>
+          </dt>
+          <dd>{{ vendor.models }}</dd>
         </div>
-        <div class="landing-platforms" aria-label="支持的平台">
-          <span v-for="platform in platforms" :key="platform.name"
-            ><SiteIcon :name="platform.icon" :size="17" />{{ platform.name }}</span
-          >
-        </div>
-      </div>
-      <ProductStage />
+      </dl>
     </section>
-    <section class="landing-devices content-width" data-reveal aria-label="已适配的设备厂商">
-      <p>支持多种主流 CPE 设备</p>
+
+    <section class="home-get content-width" aria-labelledby="get-title" data-reveal>
       <div>
-        <span v-for="[brand] in supportedDevices" :key="brand">{{ brand.split(' / ')[0] }}</span>
+        <h2 id="get-title">下载</h2>
+        <p>所有安装包都提供 SHA-256 校验值。</p>
+        <RouterLink class="home-get-status" to="/status"
+          ><i aria-hidden="true"></i>服务状态<SiteIcon name="chevron" :size="14"
+        /></RouterLink>
       </div>
-      <RouterLink :to="{ path: '/product', hash: '#devices' }">查看适配机型</RouterLink>
-    </section>
-    <section class="landing-workflow content-width" data-reveal aria-labelledby="workflow-title">
-      <div class="landing-section-heading">
-        <h2 id="workflow-title">从发现问题，<br />到验证调整结果。</h2>
-        <p>
-          观察连接与射频状态，回读频段配置，再用测试验证链路。<br />每一步都对应真实的设备数据。
-        </p>
-      </div>
-      <ProductExplorer />
-    </section>
-    <section
-      class="landing-mobile-section content-width"
-      data-reveal
-      aria-labelledby="mobile-title"
-    >
-      <div class="landing-mobile-images" aria-label="Android 功能界面">
-        <img
-          src="/media/phone/mobile-device-neighbor-cells.webp"
-          alt="Android 端设备信息与邻区界面"
-          width="1264"
-          height="2660"
-          loading="lazy"
-          decoding="async"
-        /><img
-          src="/media/phone/mobile-band-selection.webp"
-          alt="Android 端频段选择界面"
-          width="1264"
-          height="2660"
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-      <div class="landing-mobile-copy">
-        <SiteIcon name="phone" :size="30" />
-        <h2 id="mobile-title">移动端管理，<br />适用于现场调试。</h2>
-        <p>
-          通过 Android
-          客户端查看信号与邻区、配置频段及小区锁定，并在现场执行网络测试。适合设备安装、位置调整与日常维护。
-        </p>
-        <ul>
-          <li><SiteIcon name="check" :size="17" />实时查看连接与射频状态</li>
-          <li><SiteIcon name="check" :size="17" />管理频段、ARFCN 与 PCI</li>
-          <li><SiteIcon name="check" :size="17" />测速、Ping 与路由测试</li>
-        </ul>
-        <RouterLink class="landing-text-link" :to="{ path: '/product', hash: '#mobile' }"
-          >查看 Android 功能</RouterLink
-        >
-      </div>
-    </section>
-    <section class="landing-download content-width" data-reveal aria-labelledby="platform-title">
-      <div class="landing-section-heading">
-        <h2 id="platform-title">在常用设备上，<br />管理你的 CPE。</h2>
-        <RouterLink class="landing-text-link" to="/download">全部下载与校验</RouterLink>
-      </div>
-      <div class="landing-download-platforms">
-        <RouterLink
-          v-for="platform in platforms"
-          :key="platform.id"
-          :to="{ path: '/download', query: { file: platform.id } }"
-          ><SiteIcon :name="platform.icon" :size="29" />
-          <h3>{{ platform.name }}</h3>
-          <p>{{ platform.note }}</p>
-          <span>v{{ platform.version }}<SiteIcon name="download" :size="18" /></span
-        ></RouterLink>
-      </div>
-    </section>
-    <section class="landing-status content-width" data-reveal>
-      <div>
-        <SiteIcon name="activity" :size="24" />
-        <h2>官网与更新服务</h2>
-        <p>查看服务是否可用，以及已保存的检查记录。</p>
-      </div>
-      <RouterLink class="action secondary" to="/status">打开服务状态</RouterLink>
+      <ul>
+        <li v-for="platform in platforms" :key="platform.id">
+          <RouterLink :to="{ path: '/download', query: { file: platform.id } }">
+            <SiteIcon :name="platform.icon" :size="22" />
+            <strong>{{ platform.name }}</strong>
+            <span>{{ platform.note }}</span>
+            <em>v{{ platform.version }}</em>
+            <SiteIcon name="download" :size="18" />
+          </RouterLink>
+        </li>
+      </ul>
     </section>
   </div>
 </template>
