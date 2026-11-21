@@ -20,135 +20,145 @@ const platforms = computed(() =>
     version: downloads.find((download) => download.id === platform.id)?.version,
   }))
 )
-const brands = supportedDevices.map(([brand]) => brand.split(' / ')[0])
+const vendors = supportedDevices.map(([brand, models]) => {
+  const [en, zh] = brand.split(' / ')
+  return { en, zh, models }
+})
+const features = [
+  {
+    title: '连接',
+    lead: '登录后自动刷新，设备上能读到的数据都会列出来。',
+    items: [
+      '当前小区、辅载波、邻区与载波聚合',
+      'RSRP、RSRQ、SINR、CQI 按阈值标出好坏',
+      '上行功率、带宽、MCS 与流量统计',
+      '卡片的显示、顺序和宽度可以自己调整',
+    ],
+  },
+  {
+    title: '锁频',
+    lead: '按厂家能力显示可用的选项，不支持的不会出现。',
+    items: [
+      '网络首选：自动、仅 5G、仅 4G、SA / NSA',
+      '锁频段、锁 ARFCN、锁 PCI 与小区锁定',
+      '写入前读取当前规则，写入后回读校验',
+      '一键解除锁定，恢复自动选网',
+    ],
+  },
+  {
+    title: '测试',
+    lead: '确认问题出在信号、基站还是外网。',
+    items: [
+      '本机多线程测速，记录平均和实时速率',
+      'Ping 常用站点或自定义地址，查看延迟走势',
+      '路由测试与会话数并发测试',
+      '诊断页可导出离线 HTML 报告',
+    ],
+  },
+]
 </script>
 
 <template>
   <div ref="page" class="home">
-    <section class="home-hero" aria-labelledby="home-title">
-      <div class="home-glow" aria-hidden="true"></div>
-      <div class="home-hero-copy content-width">
-        <RouterLink class="home-pill" to="/changelog"
-          ><span>新版本</span>Android 3.7.1 正式版已发布<SiteIcon name="chevron" :size="14"
-        /></RouterLink>
-        <h1 id="home-title">看清每一格信号，<br /><em>调好你的 CPE。</em></h1>
+    <section class="home-hero content-width" aria-labelledby="home-title">
+      <div class="home-intro">
+        <RouterLink class="home-release" to="/changelog">
+          Android 3.7.1 · 桌面版 3.5.3<SiteIcon name="chevron" :size="14" />
+        </RouterLink>
+        <h1 id="home-title">4G / 5G CPE 的<br />本地看板。</h1>
         <p>
-          面向 4G / 5G CPE
-          的监测与调试工具。信号、小区、锁频和测速集中在同一个界面，调整前后的变化一目了然。
+          登录 CPE 后台，实时查看小区和射频质量。锁频、测速、Ping
+          和路由测试都在同一个应用里完成，数据只在你的设备和 CPE 之间传输。
         </p>
         <div class="home-actions">
-          <RouterLink class="home-button primary" to="/download"
-            ><SiteIcon name="download" :size="18" />免费下载</RouterLink
-          ><RouterLink class="home-button ghost" to="/product">了解全部功能</RouterLink>
+          <RouterLink class="home-button primary" to="/download">
+            <SiteIcon name="download" :size="18" />下载 CPE加加
+          </RouterLink>
+          <RouterLink class="home-button" to="/product">功能介绍</RouterLink>
         </div>
-        <ul class="home-platforms" aria-label="支持的平台">
-          <li v-for="platform in platforms" :key="platform.name">
-            <SiteIcon :name="platform.icon" :size="16" />{{ platform.name }}
-          </li>
-        </ul>
       </div>
-      <div class="home-stage content-width">
-        <div class="home-stage-tilt">
-          <CpeSimulator />
+      <dl class="home-facts">
+        <div>
+          <dt>支持厂家</dt>
+          <dd>{{ vendors.map((vendor) => vendor.zh).join('、') }}</dd>
         </div>
-        <p class="home-stage-hint">
-          <i aria-hidden="true"></i>可以直接点击试用：切换页签、锁定频段、开始测速。数据为模拟演示。
-        </p>
-      </div>
+        <div>
+          <dt>平台</dt>
+          <dd>Android、macOS、Windows</dd>
+        </div>
+        <div>
+          <dt>价格</dt>
+          <dd>免费，无需注册账号</dd>
+        </div>
+      </dl>
     </section>
 
-    <section class="home-brands content-width" aria-label="已适配的设备厂商">
-      <p>适配主流 CPE 设备</p>
-      <ul>
-        <li v-for="brand in brands" :key="brand">{{ brand }}</li>
-      </ul>
-      <RouterLink :to="{ path: '/product', hash: '#devices' }"
-        >查看机型<SiteIcon name="chevron" :size="14"
-      /></RouterLink>
+    <section class="home-demo content-width" aria-label="桌面端演示">
+      <CpeSimulator />
+      <p class="home-demo-note">
+        这是按桌面端界面还原的演示，可以点「连接」「锁频」「测试」试用。数据是模拟的，不会连接任何设备。
+      </p>
     </section>
 
     <section class="home-features content-width" aria-labelledby="features-title">
-      <header class="home-heading" data-reveal>
-        <small>从发现问题到验证结果</small>
-        <h2 id="features-title">调网络，不再靠猜。</h2>
-        <p>每一项数据都直接读自设备，每一次调整都能马上看到效果。</p>
-      </header>
-      <div class="home-bento">
-        <article class="home-card wide" data-reveal>
-          <div class="home-card-copy">
-            <SiteIcon name="signal" :size="20" />
-            <h3>实时信号</h3>
-            <p>RSRP、RSRQ、SINR 与服务小区持续刷新，信号好坏用颜色和曲线直接呈现。</p>
-          </div>
-          <div class="viz-wave" aria-hidden="true">
-            <i v-for="index in 24" :key="index" :style="{ '--i': index }"></i>
-          </div>
-        </article>
-        <article class="home-card" data-reveal>
-          <div class="home-card-copy">
-            <SiteIcon name="sliders" :size="20" />
-            <h3>锁频与锁小区</h3>
-            <p>锁定频段、ARFCN 与 PCI，并回读设备上的实际配置。</p>
-          </div>
-          <div class="viz-bands" aria-hidden="true">
-            <span>n78</span><span class="on">n41</span><span>n28</span><span>n1</span>
-          </div>
-        </article>
-        <article class="home-card" data-reveal>
-          <div class="home-card-copy">
-            <SiteIcon name="activity" :size="20" />
-            <h3>链路诊断</h3>
-            <p>测速、Ping 与路由追踪，判断问题出在信号、基站还是外网。</p>
-          </div>
-          <ol class="viz-log" aria-hidden="true">
-            <li><span>1</span>192.168.8.1<b>1.2 ms</b></li>
-            <li><span>2</span>10.64.0.1<b>9.8 ms</b></li>
-            <li><span>3</span>223.5.5.5<b>12.4 ms</b></li>
-          </ol>
-        </article>
-        <article class="home-card wide" data-reveal>
-          <div class="home-card-copy">
-            <SiteIcon name="monitor" :size="20" />
-            <h3>手机和电脑都能用</h3>
-            <p>Android 适合现场调试，macOS 与 Windows 适合长时间观察，功能保持一致。</p>
-          </div>
-          <ul class="viz-platforms" aria-hidden="true">
-            <li v-for="platform in platforms" :key="platform.id">
-              <SiteIcon :name="platform.icon" :size="26" /><strong>{{ platform.name }}</strong
-              ><span>v{{ platform.version }}</span>
-            </li>
+      <h2 id="features-title" data-reveal>三个页面，覆盖日常调试</h2>
+      <div class="home-columns">
+        <article v-for="(feature, index) in features" :key="feature.title" data-reveal>
+          <span>0{{ index + 1 }}</span>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.lead }}</p>
+          <ul>
+            <li v-for="item in feature.items" :key="item">{{ item }}</li>
           </ul>
         </article>
       </div>
     </section>
 
+    <section class="home-devices content-width" aria-labelledby="devices-title">
+      <header data-reveal>
+        <h2 id="devices-title">已适配的设备</h2>
+        <RouterLink :to="{ path: '/product', hash: '#devices' }"
+          >完整列表<SiteIcon name="chevron" :size="14"
+        /></RouterLink>
+      </header>
+      <dl data-reveal>
+        <div v-for="vendor in vendors" :key="vendor.en">
+          <dt>
+            <strong>{{ vendor.zh }}</strong
+            ><span>{{ vendor.en }}</span>
+          </dt>
+          <dd>{{ vendor.models }}</dd>
+        </div>
+      </dl>
+    </section>
+
     <section class="home-real content-width" aria-labelledby="real-title">
-      <header class="home-heading" data-reveal>
-        <small>真实应用界面</small>
-        <h2 id="real-title">桌面端与 Android，同一套体验。</h2>
+      <header data-reveal>
+        <h2 id="real-title">真实界面</h2>
+        <p>桌面端与 Android 截图，未经修饰。</p>
       </header>
       <div class="home-real-stage" data-reveal><ProductStage /></div>
     </section>
 
-    <section class="home-cta content-width" aria-labelledby="cta-title" data-reveal>
-      <div class="home-glow small" aria-hidden="true"></div>
-      <h2 id="cta-title">现在就看清你的网络。</h2>
-      <p>免费下载，无需注册。所有安装包都提供 SHA-256 校验。</p>
-      <div class="home-download">
-        <RouterLink
-          v-for="platform in platforms"
-          :key="platform.id"
-          :to="{ path: '/download', query: { file: platform.id } }"
-        >
-          <SiteIcon :name="platform.icon" :size="26" />
-          <strong>{{ platform.name }}</strong>
-          <span>{{ platform.note }}</span>
-          <em>v{{ platform.version }}<SiteIcon name="download" :size="16" /></em>
-        </RouterLink>
+    <section class="home-get content-width" aria-labelledby="get-title" data-reveal>
+      <div>
+        <h2 id="get-title">下载</h2>
+        <p>所有安装包都提供 SHA-256 校验值。</p>
+        <RouterLink class="home-get-status" to="/status"
+          ><i aria-hidden="true"></i>服务状态<SiteIcon name="chevron" :size="14"
+        /></RouterLink>
       </div>
-      <RouterLink class="home-status-link" to="/status"
-        ><i aria-hidden="true"></i>查看官网与更新服务的运行状态<SiteIcon name="chevron" :size="14"
-      /></RouterLink>
+      <ul>
+        <li v-for="platform in platforms" :key="platform.id">
+          <RouterLink :to="{ path: '/download', query: { file: platform.id } }">
+            <SiteIcon :name="platform.icon" :size="22" />
+            <strong>{{ platform.name }}</strong>
+            <span>{{ platform.note }}</span>
+            <em>v{{ platform.version }}</em>
+            <SiteIcon name="download" :size="18" />
+          </RouterLink>
+        </li>
+      </ul>
     </section>
   </div>
 </template>
