@@ -143,7 +143,7 @@ const speedLabel = computed(
 )
 const pingStats = computed(() => {
   const values = ping.lines.map((line) => line.ms).filter((ms): ms is number => ms !== null)
-  const all = ping.bars
+  const all = ping.bars.filter((ms) => ms > 0)
   return {
     avg: all.length ? (all.reduce((sum, ms) => sum + ms, 0) / all.length).toFixed(1) : '—',
     min: values.length ? Math.min(...values).toFixed(1) : '—',
@@ -240,7 +240,7 @@ function runTourStep() {
   const next = order[(order.indexOf(tab.value) + 1) % order.length]!
   choose(next, false)
   if (next === 'lock') {
-    picked.value = bands[(bands.indexOf(camped.value) + 1) % 2]!.id
+    picked.value = bands[(bands.findIndex((band) => band.id === camped.value.id) + 1) % 2]!.id
     later(applyLock, 900)
   }
   if (next === 'speed') later(runSpeed, 500)
