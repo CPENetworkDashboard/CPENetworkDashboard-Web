@@ -56,7 +56,7 @@ export const router = createRouter({
     if (savedPosition) return savedPosition
     if (to.hash) {
       // Wait for the outgoing page transition before finding the section.
-      await new Promise((resolve) => setTimeout(resolve, 340))
+      await new Promise((resolve) => setTimeout(resolve, 200))
       return { el: to.hash, top: 100, behavior: 'auto' }
     }
     return { top: 0, behavior: 'auto' }

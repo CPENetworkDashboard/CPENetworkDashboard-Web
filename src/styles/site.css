@@ -1,6 +1,7 @@
 :root {
   color-scheme: light;
   font-family:
+    'Inter Variable',
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -34,7 +35,7 @@
   --button-bg: #174f43;
   --button-text: #f6faf6;
   --button-hover-shadow: 0 12px 30px rgba(25, 32, 27, 0.16);
-  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'JetBrains Mono', 'Roboto Mono', monospace;
+  --mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', 'Cascadia Mono', 'JetBrains Mono', 'Roboto Mono', monospace;
   --gradient-primary: linear-gradient(135deg, var(--accent), var(--accent-2));
   --gradient-warm: linear-gradient(135deg, var(--warm), #e67e22);
   --glass-bg: rgba(255, 255, 255, 0.9);
@@ -2692,18 +2693,17 @@ p {
 .page-fade-enter-active,
 .page-fade-leave-active {
   transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .page-fade-enter-from {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(8px);
 }
 
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(-20px);
 }
 
 @keyframes scan {
