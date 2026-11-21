@@ -20,7 +20,7 @@ const chapters = [
 ] as const
 const progress = reactive(chapters.map(() => 0))
 const scrolled = reactive(chapters.map(() => 0))
-const report = (index: number) => (value: number, position: number) => {
+const report = (index: number, value: number, position: number) => {
   progress[index] = value
   scrolled[index] = position
 }
@@ -69,11 +69,11 @@ onUnmounted(() => query?.removeEventListener('change', onQuery))
       </button>
     </nav>
     <StoryHero />
-    <ChapterConnect @progress="report(0)" />
-    <ChapterLock @progress="report(1)" />
-    <ChapterTest @progress="report(2)" />
-    <ChapterTools @progress="report(3)" />
-    <ChapterStyle @progress="report(4)" />
-    <ChapterPlatforms :versions @progress="report(5)" />
+    <ChapterConnect @progress="(v, s) => report(0, v, s)" />
+    <ChapterLock @progress="(v, s) => report(1, v, s)" />
+    <ChapterTest @progress="(v, s) => report(2, v, s)" />
+    <ChapterTools @progress="(v, s) => report(3, v, s)" />
+    <ChapterStyle @progress="(v, s) => report(4, v, s)" />
+    <ChapterPlatforms :versions @progress="(v, s) => report(5, v, s)" />
   </div>
 </template>
