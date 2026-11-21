@@ -25,12 +25,9 @@ export function useStoryProgress(
   }
   const tick = (now: number) => {
     frame = 0
-    if (!inView() || progress.value >= 1 || document.hidden) {
+    // With reduced motion the story only follows the scroll position.
+    if (reduce || !inView() || progress.value >= 1 || document.hidden) {
       last = 0
-      return
-    }
-    if (reduce) {
-      progress.value = 1
       return
     }
     const dt = last ? Math.min(now - last, 64) : 0
