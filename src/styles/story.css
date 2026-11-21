@@ -270,7 +270,7 @@
   opacity: var(--b);
   transform: translate(-50%, -50%)
     translate(
-      calc(var(--bx) * var(--b) * 330px * var(--mx)),
+      calc(var(--bx) * var(--b) * 280px * var(--mx)),
       calc(var(--by) * var(--b) * 24vh * var(--my))
     )
     scale(calc(0.4 + var(--b) * 0.6));
@@ -316,7 +316,7 @@
 .story-toast {
   position: absolute;
   top: 6%;
-  left: calc(50% + 250px * var(--mx));
+  left: calc(50% + 230px * var(--mx));
   z-index: 3;
   display: inline-flex;
   align-items: center;
@@ -346,7 +346,7 @@
 .story-callout {
   --c: 0;
   position: absolute;
-  left: calc(50% - 400px * var(--mx));
+  left: calc(50% - 290px * var(--mx));
   top: 50%;
   z-index: 3;
   display: grid;
@@ -400,7 +400,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-size: clamp(120px, 24vw, 340px);
+  font-size: clamp(120px, 16vw, 280px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.06em;
@@ -437,16 +437,16 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(900px, 72vw);
+  width: min(720px, 52vw);
   opacity: calc(0.3 + var(--s) * 0.7);
-  transform: translate(-50%, -50%) translateX(calc(var(--s) * -13vw * var(--mx)))
+  transform: translate(-50%, -50%) translateX(calc(var(--s) * -9vw * var(--mx)))
     translateY(calc(var(--s) * (1 - var(--mx)) * -18vh)) scale(calc(0.7 + var(--s) * 0.3));
   will-change: transform;
 }
 .story-front {
   position: absolute;
   inset: 0;
-  transform: translateX(calc(var(--s) * 20vw * var(--mx)))
+  transform: translateX(calc(var(--s) * 12vw * var(--mx)))
     translateY(calc(var(--s) * (1 - var(--mx)) * 10vh));
   filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.7));
 }
@@ -578,5 +578,217 @@
   .story-front {
     transform: translateY(calc(var(--s) * 20%)) scale(calc(1 - var(--s) * 0.22));
     transform-origin: center top;
+  }
+}
+
+/* Typography and layout */
+.story h1,
+.story h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.story p {
+  text-wrap: pretty;
+}
+.story-hero-copy h1 {
+  font-size: clamp(44px, 5.2vw, 80px);
+  line-height: 1.12;
+}
+.story-hero-copy p {
+  max-width: 30em;
+  font-size: 17px;
+  line-height: 1.8;
+}
+.story-eyebrow {
+  font-size: 12.5px;
+  letter-spacing: 0.14em;
+}
+.story-head h2 {
+  font-size: clamp(32px, 3.4vw, 52px);
+  line-height: 1.18;
+}
+.story-reveal {
+  display: block;
+  clip-path: inset(-0.2em -0.1em calc((1 - var(--r)) * 110%) -0.1em);
+  opacity: calc(0.15 + var(--r) * 0.85);
+  transform: translateY(calc((1 - var(--r)) * 0.35em));
+}
+.story-steps b {
+  font-size: 17px;
+  font-weight: 600;
+}
+.story-steps span {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.story-stagebox {
+  perspective: 2000px;
+}
+.story-stagebox > .fit {
+  transform: rotateY(calc((0.5 - var(--t, 0.5)) * 10deg)) rotateX(2deg);
+}
+.story-rail {
+  position: fixed;
+  left: 28px;
+  top: 50%;
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(-8px);
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+}
+.story-rail.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%);
+}
+.story-rail button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: transparent;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.story-rail button span {
+  color: var(--st-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.story-rail button.on,
+.story-rail button:hover {
+  color: var(--st-text);
+}
+.story-rail button.on span {
+  color: var(--st-accent);
+}
+.story-rail i {
+  position: relative;
+  width: 3px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.story-rail i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--st-accent);
+  transform: scaleY(var(--p));
+  transform-origin: top;
+}
+
+@media (min-width: 901px) {
+  .story-sticky.stage {
+    grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.4fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(40px, 5vw, 96px);
+    padding: 96px max(96px, calc((100vw - 1240px) / 2)) 32px;
+  }
+  .story-head {
+    width: auto;
+    margin: 0;
+    text-align: left;
+  }
+  .story-steps {
+    flex-direction: column;
+    gap: 0;
+    margin-top: 36px;
+  }
+  .story-steps li {
+    max-width: 380px;
+    padding: 14px 0 14px 20px;
+    border-top: 0;
+    border-left: 2px solid rgba(255, 255, 255, 0.12);
+  }
+  .story-steps li.on {
+    border-left-color: var(--st-accent);
+  }
+  .story-versions {
+    justify-content: flex-start;
+    margin-top: 28px;
+  }
+  .story-stagebox {
+    height: 100%;
+    margin-top: 0;
+  }
+  .story-giant {
+    z-index: 2;
+    place-content: end center;
+    padding-bottom: 15%;
+    background: linear-gradient(180deg, #e6f1ff, #9cc8ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    font-size: clamp(96px, 10vw, 168px);
+    line-height: 1;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.9));
+  }
+}
+@media (max-width: 900px) {
+  .story-head h2 {
+    font-size: 26px;
+    line-height: 1.25;
+  }
+  .story-steps b {
+    font-size: 15px;
+  }
+  .story-steps span {
+    font-size: 13.5px;
+  }
+  .story-hero-copy h1 {
+    font-size: 34px;
+  }
+  .story-hero-copy p {
+    font-size: 15px;
+    line-height: 1.75;
+  }
+  .story-sticky.stage {
+    padding-bottom: 60px;
+  }
+  .story-stagebox > .fit {
+    transform: rotateY(calc((0.5 - var(--t, 0.5)) * 6deg));
+  }
+  .story-rail {
+    left: 50%;
+    top: auto;
+    bottom: 14px;
+    grid-auto-flow: column;
+    gap: 10px;
+    padding: 4px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(10, 16, 26, 0.82);
+    backdrop-filter: blur(10px);
+    transform: translateX(-50%) translateY(8px);
+  }
+  .story-rail.show {
+    transform: translateX(-50%);
+  }
+  .story-rail button {
+    gap: 6px;
+    font-size: 12px;
+  }
+  .story-rail button:not(.on) {
+    font-size: 0;
+  }
+  .story-rail i {
+    width: 22px;
+    height: 3px;
+  }
+  .story-rail i::after {
+    transform: scaleX(var(--p));
+    transform-origin: left;
   }
 }

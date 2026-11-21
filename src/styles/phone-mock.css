@@ -9,9 +9,7 @@
   box-shadow:
     inset 0 0 0 1.5px rgba(255, 255, 255, 0.12),
     0 50px 100px -40px rgba(0, 0, 0, 0.85);
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Inter Variable',
-    sans-serif;
+  font-family: 'Inter Variable', 'Noto Sans SC Variable', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
   text-align: left;
   user-select: none;
   pointer-events: none;

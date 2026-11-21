@@ -28,9 +28,7 @@
   border-radius: 14px;
   background: linear-gradient(160deg, var(--s-bg), var(--s-bg2));
   color: var(--s-text);
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Inter Variable',
-    sans-serif;
+  font-family: 'Inter Variable', 'Noto Sans SC Variable', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
   font-size: 13px;
   line-height: 1.4;
   text-align: left;

@@ -22,6 +22,22 @@ const connect = useScrollProgress(connectEl)
 const lock = useScrollProgress(lockEl)
 const test = useScrollProgress(testEl)
 const platform = useScrollProgress(platformEl)
+const reveal = (t: number) => ease(span(t, 0, 0.07))
+
+const chapters = ['连接', '锁频', '测试', '多平台']
+const chapterEls = [connectEl, lockEl, testEl, platformEl]
+const chapterProgress = computed(() => [connect.value, lock.value, test.value, platform.value])
+const railActive = computed(() => chapterProgress.value.findIndex((p) => p > 0 && p < 1))
+function jump(index: number) {
+  const element = chapterEls[index]?.value
+  if (!element) return
+  const top = element.getBoundingClientRect().top + window.scrollY
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({
+    top: top + (element.offsetHeight - window.innerHeight) * 0.3,
+    behavior: reduce ? 'auto' : 'smooth',
+  })
+}
 
 const narrow = ref(false)
 let query: MediaQueryList | undefined
@@ -217,6 +233,19 @@ const steps = {
 
 <template>
   <div class="story" :class="{ narrow }">
+    <nav class="story-rail" :class="{ show: railActive >= 0 }" aria-label="功能章节">
+      <button
+        v-for="(name, index) in chapters"
+        :key="name"
+        type="button"
+        :class="{ on: index === railActive }"
+        :aria-current="index === railActive ? 'step' : undefined"
+        @click="jump(index)"
+      >
+        <i :style="{ '--p': chapterProgress[index] }"></i><span>0{{ index + 1 }}</span
+        >{{ name }}
+      </button>
+    </nav>
     <!-- Hero -->
     <section ref="heroEl" class="story-scene hero" aria-labelledby="home-title">
       <div class="story-sticky" :style="{ '--shift': heroShift, '--e': explode }">
@@ -224,8 +253,10 @@ const steps = {
           <RouterLink class="story-release" to="/changelog"
             >Android 3.7.1 已发布<SiteIcon name="chevron" :size="14"
           /></RouterLink>
-          <h1 id="home-title">把 CPE 的每一项数据，<br />摊开给你看。</h1>
-          <p>手机连上 CPE 后台，信号、锁频、测速都在掌心。也有 macOS 与 Windows 版本。</p>
+          <h1 id="home-title">每一项数据，<br />都摊开给你看。</h1>
+          <p>
+            CPE加加 连上 4G / 5G CPE 后台，把信号、锁频和测速放进手机。也有 macOS 与 Windows 版本。
+          </p>
           <div class="story-actions">
             <RouterLink class="story-button primary" to="/download"
               ><SiteIcon name="download" :size="18" />免费下载</RouterLink
@@ -293,10 +324,14 @@ const steps = {
 
     <!-- 01 Connect -->
     <section ref="connectEl" class="story-scene" aria-labelledby="story-connect">
-      <div class="story-sticky stage">
+      <div class="story-sticky stage" :style="{ '--t': connect }">
         <header class="story-head">
           <p class="story-eyebrow">01 连接</p>
-          <h2 id="story-connect">信号好不好，一眼就知道。</h2>
+          <h2 id="story-connect">
+            <span class="story-reveal" :style="{ '--r': reveal(connect) }"
+              >信号好不好，<br />一眼就知道。</span
+            >
+          </h2>
           <ol class="story-steps">
             <li
               v-for="([title, text], index) in steps.connect"
@@ -383,10 +418,14 @@ const steps = {
 
     <!-- 02 Lock -->
     <section ref="lockEl" class="story-scene" aria-labelledby="story-lock">
-      <div class="story-sticky stage">
+      <div class="story-sticky stage" :style="{ '--t': lock }">
         <header class="story-head">
           <p class="story-eyebrow">02 锁频</p>
-          <h2 id="story-lock">换一个频段，结果当场验证。</h2>
+          <h2 id="story-lock">
+            <span class="story-reveal" :style="{ '--r': reveal(lock) }"
+              >换一个频段，<br />结果当场验证。</span
+            >
+          </h2>
           <ol class="story-steps">
             <li
               v-for="([title, text], index) in steps.lock"
@@ -451,10 +490,14 @@ const steps = {
 
     <!-- 03 Test -->
     <section ref="testEl" class="story-scene" aria-labelledby="story-test">
-      <div class="story-sticky stage">
+      <div class="story-sticky stage" :style="{ '--t': test }">
         <header class="story-head">
           <p class="story-eyebrow">03 测试</p>
-          <h2 id="story-test">问题在信号还是外网，测一下就清楚。</h2>
+          <h2 id="story-test">
+            <span class="story-reveal" :style="{ '--r': reveal(test) }"
+              >信号还是外网，<br />测一下就清楚。</span
+            >
+          </h2>
           <ol class="story-steps">
             <li
               v-for="([title, text], index) in steps.test"
@@ -536,10 +579,14 @@ const steps = {
 
     <!-- 04 Platforms -->
     <section ref="platformEl" class="story-scene short" aria-labelledby="story-platforms">
-      <div class="story-sticky stage" :style="{ '--s': slide }">
+      <div class="story-sticky stage" :style="{ '--s': slide, '--t': platform }">
         <header class="story-head">
           <p class="story-eyebrow">04 多平台</p>
-          <h2 id="story-platforms">手机现场调，电脑长时间看。</h2>
+          <h2 id="story-platforms">
+            <span class="story-reveal" :style="{ '--r': reveal(platform) }"
+              >手机现场调，<br />电脑长时间看。</span
+            >
+          </h2>
           <ol class="story-steps">
             <li
               v-for="([title, text], index) in steps.platform"
