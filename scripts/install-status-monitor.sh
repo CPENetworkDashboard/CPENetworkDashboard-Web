@@ -57,6 +57,7 @@ esac
 
 install -d -m 0755 "$install_dir/scripts" "$install_dir/src/utils"
 install -m 0644 "$repo_dir/scripts/collect-status.mjs" "$install_dir/scripts/collect-status.mjs"
+install -m 0644 "$repo_dir/scripts/status-client.mjs" "$install_dir/scripts/status-client.mjs"
 install -m 0644 "$repo_dir/src/utils/status.ts" "$install_dir/src/utils/status.ts"
 install -d -m 0700 /etc/cpe-status
 if [[ ! -e /etc/cpe-status/collector.env ]]; then

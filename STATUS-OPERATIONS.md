@@ -17,27 +17,37 @@
 
 本地执行 `node scripts/collect-status.mjs --dry-run` 仅检查、不上传。已在环境中设置 `CPE_STATUS_TOKEN` 时，运行 `node scripts/collect-status.mjs` 会上传。只判断服务可用或不可用，不按响应耗时划分等级。单项检查保留 20 秒连接与读取超时，以便在连接异常时结束请求。
 
-GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。需要更严格的调度保障时，可使用下文的 Cloudflare Worker 定时触发，或由现有服务器运行同一脚本。
+GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。需要更严格的调度保障时，可使用下文的 Cloudflare Worker 采集，或由现有服务器运行同一脚本。
 
-## Cloudflare Worker 定时触发
+## Cloudflare Worker 采集
 
-不使用自有服务器时，可由 `deploy/cloudflare/status-trigger/` 中的 Worker 准时触发采集。Worker 只在 Cron Trigger 中运行，于每小时第 2、7、12…57 分钟（UTC）调用 GitHub `repository_dispatch`（`status-probe`）。采集、补传和写入 EdgeKV 仍由 **Service availability monitoring** 工作流完成，Worker 不持有 `CPE_STATUS_TOKEN`，也不提供公开 URL。GitHub 接口 5xx 或网络异常时，同一轮内重试一次。
+不使用自有服务器和 GitHub Actions 时，由 `deploy/cloudflare/status-monitor/` 中的 Worker 采集。Worker 只在 Cron Trigger 中运行，于每小时第 2、7、12…57 分钟（UTC）执行，与 Node 脚本共用 `scripts/status-client.mjs`：检查六项服务，带 `monitor.source = external`、`event = schedule` 写入 `/api/status/ingest`。Worker 不提供公开 URL。
 
-1. 创建 GitHub fine-grained PAT：Repository access 只选本仓库，Repository permissions 设为 `Contents: Read and write`。该权限是调用 `repository_dispatch` 的要求。
-2. 部署 Worker（需要 Cloudflare 账号；如需更换仓库，修改 `wrangler.toml` 中的 `GITHUB_REPOSITORY`）：
+上传失败（包括网站整体不可用时的真实故障结果）保存在 Workers KV 的 `pending` 键，下一轮合并补传；超过 7 天的记录移入 `expired-recovery`，不阻塞新采集。正常运行时每轮只读一次 KV，失败时才写入，免费额度足够。
+
+Worker 需要：
+
+| 名称                | 类型                 | 值                                  |
+| ------------------- | -------------------- | ----------------------------------- |
+| `CPE_STATUS_TOKEN`  | Secret               | 与 EdgeKV 一致的 `CPE_STATUS_TOKEN` |
+| `CPE_STATUS_ORIGIN` | Text                 | `https://cpe.yuan6.cn`              |
+| `STATUS_QUEUE`      | KV namespace binding | 新建的 Workers KV namespace         |
+
+命令行部署：
 
 ```bash
-cd deploy/cloudflare/status-trigger
+cd deploy/cloudflare/status-monitor
 npx wrangler@4 login
-npx wrangler@4 secret put GITHUB_DISPATCH_TOKEN   # 粘贴上一步的 PAT
+npx wrangler@4 kv namespace create STATUS_QUEUE   # 将输出的 id 填入 wrangler.toml
+npx wrangler@4 secret put CPE_STATUS_TOKEN
 npx wrangler@4 deploy
 ```
 
-3. 在 Cloudflare 控制台的 Worker **Settings → Triggers** 中确认已有 Cron Trigger，然后在 **Logs** 查看 `status-probe dispatched`。失败会以异常记录在同一处。
-4. 在 GitHub Actions 确认连续两轮 **Service availability monitoring** 由 `repository_dispatch` 触发并成功；线上摘要应为 `monitor.source` = `github-actions`、`monitor.event` = `repository_dispatch`、`stale` = `false`，`lastCheckedAt` 和 `samples24h` 持续增长。随后运行 `node scripts/verify-deployment.mjs --skip-downloads --require-fresh`。
-5. 验收通过后，删除工作流中的 `schedule`，保留 `workflow_dispatch` 和 `repository_dispatch`。
+网页部署时，可用 `npx wrangler@4 deploy --dry-run --outdir dist-worker` 生成单文件 `dist-worker/worker.js`，粘贴到 Cloudflare 编辑器，再在 Settings 中添加上表的变量、KV 绑定和 Cron Trigger（`2,7,12,17,22,27,32,37,42,47,52,57 * * * *`）。
 
-运行期间工作流的 `concurrency` 保证同一时间只执行一轮，按 5 分钟槽位去重，因此切换期间 `schedule` 与 Worker 同时存在也不会产生重复样本。停用时执行 `npx wrangler@4 delete`，或在 Cloudflare 中移除 Cron Trigger，再恢复工作流的 `schedule`；EdgeKV 历史不受影响。PAT 到期前需在 Cloudflare 中重新执行 `wrangler secret put`。
+验收：Worker **Logs** 每轮输出一行 JSON，`stored + duplicates` 等于上传数量；线上摘要 `monitor.source` 为 `external`、`stale` 为 `false`，`lastCheckedAt` 和样本数持续增长；随后运行 `node scripts/verify-deployment.mjs --skip-downloads --require-fresh`。通过后删除 GitHub 工作流中的 `schedule`，避免多个主采集器并存。按 5 分钟槽位去重，切换期间短暂重叠不会产生重复样本。
+
+Workers 免费版每次调用的 CPU 时间上限为 10 ms，等待网络不计入；若日志出现 `exceededCpu`，需改用 Workers Paid。停用时在 Cloudflare 中删除 Cron Trigger 或 Worker；EdgeKV 历史不受影响。
 
 ## Linux 服务器采集
 

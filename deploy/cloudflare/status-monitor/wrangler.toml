@@ -1,11 +1,16 @@
-name = "cpe-status-trigger"
+name = "cpe-status-monitor"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 workers_dev = false
 preview_urls = false
 
 [vars]
-GITHUB_REPOSITORY = "CPENetworkDashboard/CPENetworkDashboard-Web"
+CPE_STATUS_ORIGIN = "https://cpe.yuan6.cn"
+
+# Replace with the id from `wrangler kv namespace create STATUS_QUEUE`.
+[[kv_namespaces]]
+binding = "STATUS_QUEUE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
 # UTC minutes 2, 7, ... 57, matching the collector's five-minute slots.
 [triggers]

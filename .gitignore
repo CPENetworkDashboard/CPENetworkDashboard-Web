@@ -8,6 +8,8 @@ release-originals/
 .env.*
 !.env.example
 .wrangler/
+.dev.vars
+dist-worker/
 .esa/
 .status-reports/
 .status-data/

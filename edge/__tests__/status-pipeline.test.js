@@ -40,7 +40,7 @@ describe('collector delivery guarantees', () => {
     ).resolves.toMatchObject({ duplicates: 1 })
     expect(fetcher).toHaveBeenCalledTimes(2)
     expect(fetcher.mock.calls[0][1].body).toBe(fetcher.mock.calls[1][1].body)
-    expect(fetcher.mock.calls[0][1].redirect).toBe('error')
+    expect(fetcher.mock.calls[0][1].redirect).toBe('manual')
   })
   it('does not retry invalid authentication and keeps the entire queue', async () => {
     const path = await queue([observation()])
