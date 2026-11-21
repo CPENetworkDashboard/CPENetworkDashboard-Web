@@ -17,7 +17,16 @@
 
 本地执行 `node scripts/collect-status.mjs --dry-run` 仅检查、不上传。已在环境中设置 `CPE_STATUS_TOKEN` 时，运行 `node scripts/collect-status.mjs` 会上传。只判断服务可用或不可用，不按响应耗时划分等级。单项检查保留 20 秒连接与读取超时，以便在连接异常时结束请求。
 
-GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。需要更严格的调度保障时，可由现有服务器 cron 调用同一脚本。
+GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。因此工作流已移除 `schedule`，只保留手动运行（`workflow_dispatch`）和外部触发（`repository_dispatch`），定时采集由下方 Cloudflare Worker 负责。
+
+## Cloudflare Worker 采集（当前主采集器）
+
+独立仓库 [CPENetworkDashboard/cpe-status-monitor](https://github.com/CPENetworkDashboard/cpe-status-monitor) 由 Cloudflare 连接 Git 自动部署，不需要服务器，也不消耗 GitHub Actions 额度。Cron 在 UTC 第 2、7…57 分钟运行，复用本仓库 `src/utils/status.ts` 的检查规则，结果以 `monitor.source: external` 写入 `POST /api/status/ingest`。上传失败的真实结果暂存在 Workers KV `cpe-status-queue`，下一轮补传；超过 7 天的移到 `expired-recovery`。
+
+- 令牌：Worker → 设置 → **变量和机密**（不是“构建”下的变量）中的密钥 `CPE_STATUS_TOKEN`，与 EdgeKV 一致。
+- 排查：Worker → Observability / 问题，查看每轮的 JSON 结果或报错。
+- 修改本仓库的检查规则后，需要同步到该仓库的 `src/status.ts`。
+- 回退：在 Cloudflare 删除 Cron 触发器，再在本工作流中恢复 `schedule`；已有历史不做清空。
 
 ## Linux 服务器采集
 
