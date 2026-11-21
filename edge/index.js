@@ -1700,8 +1700,8 @@ function sameSiteRequest(request, options = {}) {
   const allowNoOrigin = Boolean(options.allowNoOrigin)
   const origin = request.headers.get('Origin')
   const referer = request.headers.get('Referer')
+  // Sec-Fetch-Site can be forged by any non-browser client, so it may only veto a request.
   const fetchSite = String(request.headers.get('Sec-Fetch-Site') || '').toLowerCase()
-  if (['same-origin', 'same-site'].includes(fetchSite)) return true
   if (fetchSite && !['none', 'same-origin', 'same-site'].includes(fetchSite)) return false
 
   const targetHost = new URL(request.url).hostname.toLowerCase()
