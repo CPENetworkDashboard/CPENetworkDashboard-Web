@@ -106,6 +106,18 @@ describe('Cloudflare status monitor', () => {
     expect(JSON.parse(kv.data.get('expired-recovery'))).toEqual([old])
   })
 
+  it('replays at most one ingest request per run and keeps the rest queued', async () => {
+    const at = new Date().toISOString()
+    const pending = Array.from({ length: 2016 }, () => ({ at, services: [] }))
+    const kv = memoryKv({ pending })
+    const up = harness()
+    const result = await runStatusMonitor(env(kv), { fetcher: up.fetcher, sleep: noWait })
+    expect(up.uploads).toHaveLength(1)
+    expect(up.uploads[0].body.reports).toHaveLength(2016)
+    expect(result.remaining).toBe(1)
+    expect(JSON.parse(kv.data.get('pending'))).toHaveLength(1)
+  })
+
   it('does not retry or queue when the token is rejected', async () => {
     const kv = memoryKv()
     const { fetcher, uploads } = harness({ ingest: () => reply({ ok: false }, 403) })

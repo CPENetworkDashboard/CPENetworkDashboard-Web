@@ -8,7 +8,8 @@ import {
 const PENDING_KEY = 'pending'
 const EXPIRED_KEY = 'expired-recovery'
 const REPLAY_WINDOW_MS = 7 * 86400_000
-const BATCH_SIZE = 100
+// Ingest rewrites the whole history per request, so replay in one request per run.
+const MAX_BATCH = 2016
 
 async function readList(kv, key) {
   const value = (await kv.get(key, 'json')) ?? []
@@ -35,26 +36,23 @@ export async function runStatusMonitor(env, options = {}) {
     await kv.put(EXPIRED_KEY, JSON.stringify([...recovery, ...expired]))
   }
 
-  let stored = 0
-  let duplicates = 0
+  const batch = queue.slice(0, MAX_BATCH)
+  const remaining = queue.slice(batch.length)
+  let result
   try {
-    while (queue.length) {
-      const batch = queue.slice(0, BATCH_SIZE)
-      const result = await uploadStatusReports(origin, token, batch, options)
-      stored += result.stored
-      duplicates += result.duplicates
-      queue = queue.slice(batch.length)
-    }
+    result = await uploadStatusReports(origin, token, batch, options)
   } catch (error) {
     // Keep unacknowledged reports, including real outage results, for the next run.
     await kv.put(PENDING_KEY, JSON.stringify(queue))
     throw error
   }
-  if (pending.length) await kv.delete(PENDING_KEY)
+  if (remaining.length) await kv.put(PENDING_KEY, JSON.stringify(remaining))
+  else if (pending.length) await kv.delete(PENDING_KEY)
   return {
     checkedAt: report.at,
-    stored,
-    duplicates,
+    stored: result.stored,
+    duplicates: result.duplicates,
+    remaining: remaining.length,
     replayed: pending.length - expired.length,
     expired: expired.length,
     services: report.services.map(({ id, state }) => ({ id, state })),
