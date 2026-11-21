@@ -1189,6 +1189,7 @@ function releaseDownloadPayload(fileId) {
     chunkBytes: Array.isArray(item.chunkBytes) ? item.chunkBytes : [],
     size: item.size || '',
     checksum: item.checksum || '',
+    signature: item.signature || '',
   }
 }
 
@@ -1367,6 +1368,7 @@ function normalizePublishedRelease(body) {
             : [],
           size: String(body.download.size || '').trim(),
           checksum: String(body.download.checksum || '').trim(),
+          signature: String(body.download.signature || '').trim(),
         }
       : null
   const download = customDownload || knownDownload

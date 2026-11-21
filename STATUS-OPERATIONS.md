@@ -17,37 +17,16 @@
 
 本地执行 `node scripts/collect-status.mjs --dry-run` 仅检查、不上传。已在环境中设置 `CPE_STATUS_TOKEN` 时，运行 `node scripts/collect-status.mjs` 会上传。只判断服务可用或不可用，不按响应耗时划分等级。单项检查保留 20 秒连接与读取超时，以便在连接异常时结束请求。
 
-GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。需要更严格的调度保障时，可使用下文的 Cloudflare Worker 采集，或由现有服务器运行同一脚本。
+GitHub 定时任务可能延迟；公开仓库长期无活动时可能自动停用。页面以 15 分钟为新鲜度阈值，迟到或漏采会显示更新延迟和较低采集覆盖率。因此工作流已移除 `schedule`，只保留手动运行（`workflow_dispatch`）和外部触发（`repository_dispatch`），定时采集由下方 Cloudflare Worker 负责。
 
-## Cloudflare Worker 采集
+## Cloudflare Worker 采集（当前主采集器）
 
-不使用自有服务器和 GitHub Actions 时，由 `deploy/cloudflare/status-monitor/` 中的 Worker 采集。Worker 只在 Cron Trigger 中运行，于每小时第 2、7、12…57 分钟（UTC）执行，与 Node 脚本共用 `scripts/status-client.mjs`：检查六项服务，带 `monitor.source = external`、`event = schedule` 写入 `/api/status/ingest`。Worker 不提供公开 URL。
+独立仓库 [CPENetworkDashboard/cpe-status-monitor](https://github.com/CPENetworkDashboard/cpe-status-monitor) 由 Cloudflare 连接 Git 自动部署，不需要服务器，也不消耗 GitHub Actions 额度。Cron 在 UTC 第 2、7…57 分钟运行，复用本仓库 `src/utils/status.ts` 的检查规则，结果以 `monitor.source: external` 写入 `POST /api/status/ingest`。上传失败的真实结果暂存在 Workers KV `cpe-status-queue`，下一轮补传；超过 7 天的移到 `expired-recovery`。
 
-上传失败（包括网站整体不可用时的真实故障结果）保存在 Workers KV 的 `pending` 键，下一轮合并补传；超过 7 天的记录移入 `expired-recovery`，不阻塞新采集。正常运行时每轮只读一次 KV，失败时才写入，免费额度足够。
-
-Worker 需要：
-
-| 名称                | 类型                 | 值                                  |
-| ------------------- | -------------------- | ----------------------------------- |
-| `CPE_STATUS_TOKEN`  | Secret               | 与 EdgeKV 一致的 `CPE_STATUS_TOKEN` |
-| `CPE_STATUS_ORIGIN` | Text                 | `https://cpe.yuan6.cn`              |
-| `STATUS_QUEUE`      | KV namespace binding | 新建的 Workers KV namespace         |
-
-命令行部署：
-
-```bash
-cd deploy/cloudflare/status-monitor
-npx wrangler@4 login
-npx wrangler@4 kv namespace create STATUS_QUEUE   # 将输出的 id 填入 wrangler.toml
-npx wrangler@4 secret put CPE_STATUS_TOKEN
-npx wrangler@4 deploy
-```
-
-网页部署时，可用 `npx wrangler@4 deploy --dry-run --outdir dist-worker` 生成单文件 `dist-worker/worker.js`，粘贴到 Cloudflare 编辑器，再在 Settings 中添加上表的变量、KV 绑定和 Cron Trigger（`2,7,12,17,22,27,32,37,42,47,52,57 * * * *`）。
-
-验收：Worker **Logs** 每轮输出一行 JSON，`stored + duplicates` 等于上传数量；线上摘要 `monitor.source` 为 `external`、`stale` 为 `false`，`lastCheckedAt` 和样本数持续增长；随后运行 `node scripts/verify-deployment.mjs --skip-downloads --require-fresh`。通过后删除 GitHub 工作流中的 `schedule`，避免多个主采集器并存。按 5 分钟槽位去重，切换期间短暂重叠不会产生重复样本。
-
-Workers 免费版每次调用的 CPU 时间上限为 10 ms，等待网络不计入；若日志出现 `exceededCpu`，需改用 Workers Paid。停用时在 Cloudflare 中删除 Cron Trigger 或 Worker；EdgeKV 历史不受影响。
+- 令牌：Worker → 设置 → **变量和机密**（不是“构建”下的变量）中的密钥 `CPE_STATUS_TOKEN`，与 EdgeKV 一致。
+- 排查：Worker → Observability / 问题，查看每轮的 JSON 结果或报错。
+- 修改本仓库的检查规则后，需要同步到该仓库的 `src/status.ts`。
+- 回退：在 Cloudflare 删除 Cron 触发器，再在本工作流中恢复 `schedule`；已有历史不做清空。
 
 ## Linux 服务器采集
 
