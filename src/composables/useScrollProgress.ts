@@ -1,7 +1,7 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
 /** 0 when the element's top reaches the viewport top, 1 when its bottom reaches the viewport bottom. */
-export function useScrollProgress(target: Ref<HTMLElement | null>) {
+export function useScrollProgress(target: Readonly<Ref<HTMLElement | null>>) {
   const progress = ref(0)
   let frame = 0
   const measure = () => {
