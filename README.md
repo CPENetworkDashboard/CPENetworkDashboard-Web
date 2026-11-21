@@ -261,6 +261,7 @@ Content-Type: application/json
       "chunkBytes": [20971520, 10841841],
       "size": "30.3 MiB",
       "checksum": "ee0cb8b3ea23ee69d7f2d42f014c089c961c5687c1966ee3fff1ef1bb904bbf5",
+      "signature": "",
       "url": "https://cpe.yuan6.cn/downloads/chunks/android-3.7.1/CPENetworkDashboard%20V3.7.1.apk.part00",
       "directUrl": ""
     },
@@ -273,12 +274,13 @@ Content-Type: application/json
 
 下载字段说明：
 
-| 字段         | 说明                                                                        |
-| ------------ | --------------------------------------------------------------------------- |
-| `mode`       | `single` 表示直接下载 `url`；`chunked` 表示按 `chunks` 顺序下载并合并       |
-| `checksum`   | 原始完整安装包的 SHA-256，单包下载或分片合并后都按这个值校验                |
-| `chunks`     | 分片数组，每项包含 `index`、相对路径 `href`、绝对地址 `url`、字节数 `bytes` |
-| `chunkBytes` | 兼容旧逻辑的分片大小数组                                                    |
+| 字段         | 说明                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `mode`       | `single` 表示直接下载 `url`；`chunked` 表示按 `chunks` 顺序下载并合并                       |
+| `checksum`   | 原始完整安装包的 SHA-256，单包下载或分片合并后都按这个值校验                                |
+| `signature`  | 原始完整安装包的 Ed25519 发布签名（Base64），桌面端安装前用内置公钥校验；未签名时为空字符串 |
+| `chunks`     | 分片数组，每项包含 `index`、相对路径 `href`、绝对地址 `url`、字节数 `bytes`                 |
+| `chunkBytes` | 兼容旧逻辑的分片大小数组                                                                    |
 
 当前默认版本数据：
 
