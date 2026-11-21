@@ -11,8 +11,8 @@ import { finalPower, finalRadio } from './data'
 import { ease, span } from './quality'
 
 defineProps<{ versions: Array<{ name: string; version?: string }> }>()
-const emit = defineEmits<{ progress: [number] }>()
-const { t, reveal } = useChapter(6500, (v) => emit('progress', v))
+const emit = defineEmits<{ progress: [number, number] }>()
+const { t, reveal } = useChapter(6500, (v, s) => emit('progress', v, s))
 const slide = computed(() => ease(span(t.value, 0.04, 0.4)))
 const wipe = computed(() => ease(span(t.value, 0.56, 0.9)))
 const step = computed(() => (t.value < 0.3 ? 0 : t.value < 0.56 ? 1 : 2))

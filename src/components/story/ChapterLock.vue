@@ -7,8 +7,8 @@ import StoryChapter from './StoryChapter.vue'
 import { useChapter } from './chapter'
 import { ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number] }>()
-const { t, reveal } = useChapter(8000, (v) => emit('progress', v))
+const emit = defineEmits<{ progress: [number, number] }>()
+const { t, reveal } = useChapter(8000, (v, s) => emit('progress', v, s))
 const deal = computed(() => {
   const open = ease(span(t.value, 0.02, 0.14))
   return open * (1 - ease(span(t.value, 0.16, 0.3)))

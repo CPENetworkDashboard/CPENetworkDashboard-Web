@@ -9,8 +9,8 @@ import { useChapter } from './chapter'
 import { W } from './data'
 import { ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number] }>()
-const { t, reveal } = useChapter(9000, (v) => emit('progress', v))
+const emit = defineEmits<{ progress: [number, number] }>()
+const { t, reveal } = useChapter(9000, (v, s) => emit('progress', v, s))
 
 // Samples jump the way a live multi-thread test does, rather than gliding.
 const downSteps = [0, 96, 284, 461, 618, 742, 836, 893, 921, 932]

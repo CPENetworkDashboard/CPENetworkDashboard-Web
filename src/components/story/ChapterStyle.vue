@@ -8,8 +8,8 @@ import { useChapter } from './chapter'
 import { finalPower, finalRadio } from './data'
 import { clamp, ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number] }>()
-const { t, reveal } = useChapter(8500, (v) => emit('progress', v))
+const emit = defineEmits<{ progress: [number, number] }>()
+const { t, reveal } = useChapter(8500, (v, s) => emit('progress', v, s))
 
 const zoom = computed(() => pop(span(t.value, 0.02, 0.14)) * (1 - ease(span(t.value, 0.4, 0.48))))
 // The lens hops tab to tab, stretching while it moves like the real dock.

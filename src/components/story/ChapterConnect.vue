@@ -8,8 +8,8 @@ import { useChapter } from './chapter'
 import { powerAt, radioAt } from './data'
 import { ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number] }>()
-const { t, reveal } = useChapter(7000, (v) => emit('progress', v))
+const emit = defineEmits<{ progress: [number, number] }>()
+const { t, reveal } = useChapter(7000, (v, s) => emit('progress', v, s))
 const fill = computed(() => ease(span(t.value, 0.06, 0.46)))
 const radio = computed(() => radioAt(fill.value))
 const power = computed(() => powerAt(ease(span(t.value, 0.16, 0.5))))

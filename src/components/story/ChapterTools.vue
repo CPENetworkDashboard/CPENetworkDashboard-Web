@@ -6,8 +6,8 @@ import StoryChapter from './StoryChapter.vue'
 import { useChapter } from './chapter'
 import { ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number] }>()
-const { t, reveal } = useChapter(7000, (v) => emit('progress', v))
+const emit = defineEmits<{ progress: [number, number] }>()
+const { t, reveal } = useChapter(7000, (v, s) => emit('progress', v, s))
 
 // [name, channel position 0..336, half width, peak height, colour]
 const aps = [

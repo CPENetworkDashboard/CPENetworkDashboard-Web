@@ -19,14 +19,18 @@ const chapters = [
   ['story-platforms', '多平台'],
 ] as const
 const progress = reactive(chapters.map(() => 0))
-const report = (index: number) => (value: number) => (progress[index] = value)
-// The latest chapter the reader has entered; hidden before the first and after the last.
+const scrolled = reactive(chapters.map(() => 0))
+const report = (index: number) => (value: number, position: number) => {
+  progress[index] = value
+  scrolled[index] = position
+}
+// The latest chapter the reader has entered; hidden before the first and once scrolled past the last.
 const active = computed(() => {
   let index = -1
   progress.forEach((p, i) => {
     if (p > 0) index = i
   })
-  return index === progress.length - 1 && progress[index]! >= 1 ? -1 : index
+  return scrolled[progress.length - 1]! >= 1 ? -1 : index
 })
 function jump(index: number) {
   const element = document.getElementById(chapters[index]![0])
@@ -65,11 +69,11 @@ onUnmounted(() => query?.removeEventListener('change', onQuery))
       </button>
     </nav>
     <StoryHero />
-    <ChapterConnect @progress="report(0)($event)" />
-    <ChapterLock @progress="report(1)($event)" />
-    <ChapterTest @progress="report(2)($event)" />
-    <ChapterTools @progress="report(3)($event)" />
-    <ChapterStyle @progress="report(4)($event)" />
-    <ChapterPlatforms :versions @progress="report(5)($event)" />
+    <ChapterConnect @progress="report(0)" />
+    <ChapterLock @progress="report(1)" />
+    <ChapterTest @progress="report(2)" />
+    <ChapterTools @progress="report(3)" />
+    <ChapterStyle @progress="report(4)" />
+    <ChapterPlatforms :versions @progress="report(5)" />
   </div>
 </template>
