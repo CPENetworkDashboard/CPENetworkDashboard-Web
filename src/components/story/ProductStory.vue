@@ -27,7 +27,14 @@ const reveal = (t: number) => ease(span(t, 0, 0.07))
 const chapters = ['连接', '锁频', '测试', '多平台']
 const chapterEls = [connectEl, lockEl, testEl, platformEl]
 const chapterProgress = computed(() => [connect.value, lock.value, test.value, platform.value])
-const railActive = computed(() => chapterProgress.value.findIndex((p) => p > 0 && p < 1))
+const railActive = computed(() => {
+  const list = chapterProgress.value
+  let index = -1
+  list.forEach((p, i) => {
+    if (p > 0) index = i
+  })
+  return index === list.length - 1 && list[index] >= 1 ? -1 : index
+})
 function jump(index: number) {
   const element = chapterEls[index]?.value
   if (!element) return
