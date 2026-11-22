@@ -208,7 +208,7 @@ const cityAliases: Record<string, string> = {
   Zhengzhou: '郑州',
   Urumqi: '乌鲁木齐',
   urumqi: '乌鲁木齐',
-  'Ürümqi': '乌鲁木齐',
+  Ürümqi: '乌鲁木齐',
   Wulumuqi: '乌鲁木齐',
   wulumuqi: '乌鲁木齐',
   Taiwan: '台湾',
@@ -231,7 +231,13 @@ const cityAliases: Record<string, string> = {
 
 function normalizeCountryName(value = ''): string {
   const raw = value.trim()
-  return countryAliases[raw] || countryAliases[raw.toUpperCase()] || countryAliases[raw.toLowerCase()] || raw || '未知'
+  return (
+    countryAliases[raw] ||
+    countryAliases[raw.toUpperCase()] ||
+    countryAliases[raw.toLowerCase()] ||
+    raw ||
+    '未知'
+  )
 }
 
 function normalizePlaceKey(value = ''): string {
@@ -262,7 +268,10 @@ function normalizeChinaPlaceName(value = ''): string {
     cityAliasLookup[raw] ||
     cityAliasLookup[normalizePlaceKey(raw)] ||
     raw
-      .replace(/(土家族苗族|藏族羌族|哈尼族彝族|傣族景颇族|蒙古族藏族|柯尔克孜|哈萨克|蒙古|藏族|彝族|傣族|白族|苗族|回族|壮族)自治州$/, '')
+      .replace(
+        /(土家族苗族|藏族羌族|哈尼族彝族|傣族景颇族|蒙古族藏族|柯尔克孜|哈萨克|蒙古|藏族|彝族|傣族|白族|苗族|回族|壮族)自治州$/,
+        ''
+      )
       .replace(/(维吾尔|壮族|回族|特别)?自治区$/, '')
       .replace(/省$/, '')
       .replace(/市$/, '')
@@ -274,17 +283,14 @@ function normalizeChinaPlaceName(value = ''): string {
 
 function normalizeCityName(city = '', region = '', countryCode = ''): string {
   const code = countryCode.toUpperCase()
-  const fallbackRegion = code === 'TW' ? '台湾' : code === 'HK' ? '香港' : code === 'MO' ? '澳门' : ''
+  const fallbackRegion =
+    code === 'TW' ? '台湾' : code === 'HK' ? '香港' : code === 'MO' ? '澳门' : ''
   const normalizedCity = normalizeChinaPlaceName(city)
   const normalizedRegion = normalizeChinaPlaceName(region)
   const cityValue = ['unknown', '未知', ''].includes(normalizedCity.toLowerCase())
     ? ''
     : normalizedCity
-  const value =
-    cityValue ||
-    fallbackRegion ||
-    normalizedRegion ||
-    '未知'
+  const value = cityValue || fallbackRegion || normalizedRegion || '未知'
   return value
 }
 
@@ -451,7 +457,7 @@ function initMap() {
 
     L.tileLayer(
       'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
-      { subdomains: '1234', maxZoom: 18 },
+      { subdomains: '1234', maxZoom: 18 }
     ).addTo(mapInstance)
 
     const points: [number, number][] = []
@@ -467,7 +473,7 @@ function initMap() {
         weight: 1.5,
       })
       circle.bindPopup(
-        `<div style="font-size:13px"><b>${city.city}</b><br/>${city.count} 次访问</div>`,
+        `<div style="font-size:13px"><b>${city.city}</b><br/>${city.count} 次访问</div>`
       )
       circle.addTo(mapInstance)
       points.push([city.lat, city.lon])
@@ -498,7 +504,7 @@ function setupMapObserver() {
         mapObserver?.disconnect()
       }
     },
-    { threshold: 0.1 },
+    { threshold: 0.1 }
   )
   mapObserver.observe(mapContainer.value)
 }
@@ -509,7 +515,7 @@ const cityStrip = computed(() =>
   (cities.value || []).slice(0, 8).map((c) => ({
     label: `${c.city}·${c.count}`,
     count: c.count,
-  })),
+  }))
 )
 
 /* ── Lifecycle ───────────────────────────────────────────── */
@@ -607,244 +613,231 @@ watch(cities, () => {
     </form>
 
     <template v-else>
-
-    <!-- KPI Cards -->
-    <div id="analytics-metrics" class="kpi-grid">
-      <div class="kpi-card">
-        <span class="kpi-label">累计访问</span>
-        <strong class="kpi-value">{{ formatNumber(totalVisits) }}</strong>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">累计下载</span>
-        <strong class="kpi-value">{{ formatNumber(totalDownloads) }}</strong>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">今日访问</span>
-        <strong class="kpi-value">{{ formatNumber(todayVisits) }}</strong>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">访问国家</span>
-        <strong class="kpi-value">{{ formatNumber(countryCount) }}</strong>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">访问城市</span>
-        <strong class="kpi-value">{{ formatNumber(cityCount) }}</strong>
-      </div>
-    </div>
-
-    <!-- Visualization Row: Bar Chart + Map -->
-    <div class="viz-row">
-      <!-- 24h Bar Chart -->
-      <section id="analytics-chart" class="glass-panel bar-chart-panel">
-        <div class="panel-title">
-          <span>今日 24 小时</span>
-          <small>访问 {{ hourlyTotal }} / 下载 {{ downloadHourlyTotal }}</small>
+      <!-- KPI Cards -->
+      <div id="analytics-metrics" class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">累计访问</span>
+          <strong class="kpi-value">{{ formatNumber(totalVisits) }}</strong>
         </div>
-        <div class="dual-chart">
-          <div class="chart-row visit-row">
-            <div class="chart-row-head">
-              <strong>访问</strong>
-              <span>峰值 {{ visitHourlyMax }}</span>
-            </div>
-            <div class="bar-chart">
-              <div class="bar-scale">
-                <span v-for="(v, i) in visitScaleLabels" :key="i">{{ v }}</span>
+        <div class="kpi-card">
+          <span class="kpi-label">累计下载</span>
+          <strong class="kpi-value">{{ formatNumber(totalDownloads) }}</strong>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">今日访问</span>
+          <strong class="kpi-value">{{ formatNumber(todayVisits) }}</strong>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">访问国家</span>
+          <strong class="kpi-value">{{ formatNumber(countryCount) }}</strong>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">访问城市</span>
+          <strong class="kpi-value">{{ formatNumber(cityCount) }}</strong>
+        </div>
+      </div>
+
+      <!-- Visualization Row: Bar Chart + Map -->
+      <div class="viz-row">
+        <!-- 24h Bar Chart -->
+        <section id="analytics-chart" class="glass-panel bar-chart-panel">
+          <div class="panel-title">
+            <span>今日 24 小时</span>
+            <small>访问 {{ hourlyTotal }} / 下载 {{ downloadHourlyTotal }}</small>
+          </div>
+          <div class="dual-chart">
+            <div class="chart-row visit-row">
+              <div class="chart-row-head">
+                <strong>访问</strong>
+                <span>峰值 {{ visitHourlyMax }}</span>
               </div>
-              <div class="bar-grid">
-                <div
-                  v-for="bar in hourlyBars"
-                  :key="`visit-${bar.hour}`"
-                  class="bar-col"
-                  :class="{ current: bar.isCurrent }"
-                >
-                  <div class="bar-track">
-                    <div
-                      class="bar-fill visit"
-                      :title="`${bar.hour}:00 访问 ${bar.visits}`"
-                      :style="{ height: bar.visitPct + '%' }"
-                    />
+              <div class="bar-chart">
+                <div class="bar-scale">
+                  <span v-for="(v, i) in visitScaleLabels" :key="i">{{ v }}</span>
+                </div>
+                <div class="bar-grid">
+                  <div
+                    v-for="bar in hourlyBars"
+                    :key="`visit-${bar.hour}`"
+                    class="bar-col"
+                    :class="{ current: bar.isCurrent }"
+                  >
+                    <div class="bar-track">
+                      <div
+                        class="bar-fill visit"
+                        :title="`${bar.hour}:00 访问 ${bar.visits}`"
+                        :style="{ height: bar.visitPct + '%' }"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chart-row download-row">
+              <div class="chart-row-head">
+                <strong>下载</strong>
+                <span>峰值 {{ downloadHourlyMax }}</span>
+              </div>
+              <div class="bar-chart">
+                <div class="bar-scale">
+                  <span v-for="(v, i) in downloadScaleLabels" :key="i">{{ v }}</span>
+                </div>
+                <div class="bar-grid with-hours">
+                  <div
+                    v-for="bar in hourlyBars"
+                    :key="`download-${bar.hour}`"
+                    class="bar-col"
+                    :class="{ current: bar.isCurrent }"
+                  >
+                    <div class="bar-track">
+                      <div
+                        class="bar-fill download"
+                        :title="`${bar.hour}:00 下载 ${bar.downloads}`"
+                        :style="{ height: bar.downloadPct + '%' }"
+                      />
+                    </div>
+                    <span class="bar-hour">{{ bar.hour }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="chart-row download-row">
-            <div class="chart-row-head">
-              <strong>下载</strong>
-              <span>峰值 {{ downloadHourlyMax }}</span>
-            </div>
-            <div class="bar-chart">
-              <div class="bar-scale">
-                <span v-for="(v, i) in downloadScaleLabels" :key="i">{{ v }}</span>
-              </div>
-              <div class="bar-grid with-hours">
-                <div
-                  v-for="bar in hourlyBars"
-                  :key="`download-${bar.hour}`"
-                  class="bar-col"
-                  :class="{ current: bar.isCurrent }"
-                >
-                  <div class="bar-track">
-                    <div
-                      class="bar-fill download"
-                      :title="`${bar.hour}:00 下载 ${bar.downloads}`"
-                      :style="{ height: bar.downloadPct + '%' }"
-                    />
-                  </div>
-                  <span class="bar-hour">{{ bar.hour }}</span>
+          <div class="download-distribution">
+            <span class="distribution-title">下载时间分布</span>
+            <div v-if="downloadDistribution.length" class="distribution-list">
+              <div v-for="item in downloadDistribution" :key="item.hour" class="distribution-row">
+                <span>{{ item.hour }}</span>
+                <div class="distribution-track">
+                  <i :style="{ width: item.pct + '%' }" />
                 </div>
+                <strong>{{ item.count }}</strong>
               </div>
             </div>
+            <span v-else class="distribution-empty">今天还没有下载</span>
           </div>
-        </div>
-        <div class="download-distribution">
-          <span class="distribution-title">下载时间分布</span>
-          <div v-if="downloadDistribution.length" class="distribution-list">
-            <div
-              v-for="item in downloadDistribution"
-              :key="item.hour"
-              class="distribution-row"
+        </section>
+
+        <!-- Map -->
+        <section id="analytics-map" class="glass-panel map-panel">
+          <div class="panel-title">
+            <span>城市分布</span>
+            <small>{{ cityCount }} 个城市</small>
+          </div>
+          <div ref="mapContainer" class="map-container" />
+          <div v-if="cityStrip.length" class="city-strip">
+            <span v-for="(c, i) in cityStrip" :key="i" class="city-tag">{{ c.label }}</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Tabbed Breakdown + Download Ranking -->
+      <div class="bottom-row">
+        <!-- Breakdown Tabs -->
+        <section id="analytics-breakdown" class="glass-panel breakdown-panel">
+          <div class="tab-bar">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              :class="['tab-btn', { active: activeTab === tab.key }]"
+              @click="activeTab = tab.key"
             >
-              <span>{{ item.hour }}</span>
-              <div class="distribution-track">
-                <i :style="{ width: item.pct + '%' }" />
-              </div>
-              <strong>{{ item.count }}</strong>
-            </div>
+              {{ tab.label }}
+            </button>
           </div>
-          <span v-else class="distribution-empty">今天还没有下载</span>
-        </div>
-      </section>
 
-      <!-- Map -->
-      <section id="analytics-map" class="glass-panel map-panel">
-        <div class="panel-title">
-          <span>城市分布</span>
-          <small>{{ cityCount }} 个城市</small>
-        </div>
-        <div ref="mapContainer" class="map-container" />
-        <div v-if="cityStrip.length" class="city-strip">
-          <span
-            v-for="(c, i) in cityStrip"
-            :key="i"
-            class="city-tag"
-          >{{ c.label }}</span>
-        </div>
-      </section>
-    </div>
+          <div class="tab-content">
+            <!-- Table view for non-recent tabs -->
+            <template v-if="activeTab !== 'recent'">
+              <div v-if="!tabData.length" class="empty-hint">还没有数据</div>
+              <table v-else class="breakdown-table">
+                <tbody>
+                  <tr v-for="(item, i) in tabData" :key="i">
+                    <td class="rank-cell">{{ i + 1 }}</td>
+                    <td class="name-cell">{{ item.name }}</td>
+                    <td class="count-cell">{{ formatNumber(item.count) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </template>
 
-    <!-- Tabbed Breakdown + Download Ranking -->
-    <div class="bottom-row">
-      <!-- Breakdown Tabs -->
-      <section id="analytics-breakdown" class="glass-panel breakdown-panel">
-        <div class="tab-bar">
-          <button
-            v-for="tab in tabs"
-            :key="tab.key"
-            :class="['tab-btn', { active: activeTab === tab.key }]"
-            @click="activeTab = tab.key"
-          >
-            {{ tab.label }}
-          </button>
-        </div>
+            <!-- Recent events -->
+            <template v-else>
+              <div v-if="!recentEvents.length" class="empty-hint">还没有记录</div>
+              <table v-else class="breakdown-table recent-table">
+                <thead>
+                  <tr>
+                    <th>时间</th>
+                    <th>类型</th>
+                    <th>页面/文件</th>
+                    <th>设备</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(ev, i) in recentEvents" :key="i">
+                    <td class="time-cell">{{ formatTime(ev.time) }}</td>
+                    <td>
+                      <span :class="['ev-badge', ev.kind]">
+                        {{ ev.kind === 'download' ? '下载' : '浏览' }}
+                      </span>
+                    </td>
+                    <td class="page-cell">{{ ev.page || ev.fileLabel || ev.file || '-' }}</td>
+                    <td class="device-cell">{{ normalizeDeviceName(ev.device || '') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </template>
+          </div>
+        </section>
 
-        <div class="tab-content">
-          <!-- Table view for non-recent tabs -->
-          <template v-if="activeTab !== 'recent'">
-            <div v-if="!tabData.length" class="empty-hint">还没有数据</div>
-            <table v-else class="breakdown-table">
-              <tbody>
-                <tr v-for="(item, i) in tabData" :key="i">
-                  <td class="rank-cell">{{ i + 1 }}</td>
-                  <td class="name-cell">{{ item.name }}</td>
-                  <td class="count-cell">{{ formatNumber(item.count) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-
-          <!-- Recent events -->
-          <template v-else>
-            <div v-if="!recentEvents.length" class="empty-hint">还没有记录</div>
-            <table v-else class="breakdown-table recent-table">
-              <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>类型</th>
-                  <th>页面/文件</th>
-                  <th>设备</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(ev, i) in recentEvents" :key="i">
-                  <td class="time-cell">{{ formatTime(ev.time) }}</td>
-                  <td>
-                    <span :class="['ev-badge', ev.kind]">
-                      {{ ev.kind === 'download' ? '下载' : '浏览' }}
-                    </span>
-                  </td>
-                  <td class="page-cell">{{ ev.page || ev.fileLabel || ev.file || '-' }}</td>
-                  <td class="device-cell">{{ normalizeDeviceName(ev.device || '') }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-        </div>
-      </section>
-
-      <!-- Download Ranking -->
-      <section id="analytics-downloads" class="glass-panel download-rank-panel">
-        <div class="panel-title">
-          <span>下载排行</span>
-          <small>{{ summary?.downloadsTotal ?? 0 }} 次下载</small>
-        </div>
-        <div class="rank-sections">
-          <section class="rank-section">
-            <div class="panel-subtitle">文件</div>
-            <div v-if="!downloadRanking.length" class="empty-hint">还没有下载</div>
-            <div v-else class="rank-list">
-              <div
-                v-for="(item, i) in downloadRanking"
-                :key="item.id"
-                class="rank-item"
-              >
-                <span class="rank-num">{{ i + 1 }}</span>
-                <div class="rank-info">
-                  <strong>{{ item.label }}</strong>
-                  <small>{{ item.total }} 次下载{{ item.today ? ` · 今日 ${item.today}` : '' }}</small>
+        <!-- Download Ranking -->
+        <section id="analytics-downloads" class="glass-panel download-rank-panel">
+          <div class="panel-title">
+            <span>下载排行</span>
+            <small>{{ summary?.downloadsTotal ?? 0 }} 次下载</small>
+          </div>
+          <div class="rank-sections">
+            <section class="rank-section">
+              <div class="panel-subtitle">文件</div>
+              <div v-if="!downloadRanking.length" class="empty-hint">还没有下载</div>
+              <div v-else class="rank-list">
+                <div v-for="(item, i) in downloadRanking" :key="item.id" class="rank-item">
+                  <span class="rank-num">{{ i + 1 }}</span>
+                  <div class="rank-info">
+                    <strong>{{ item.label }}</strong>
+                    <small
+                      >{{ item.total }} 次下载{{ item.today ? ` · 今日 ${item.today}` : '' }}</small
+                    >
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
-          <section class="rank-section">
-            <div class="panel-subtitle">版本</div>
-            <div v-if="!downloadVersionRanking.length" class="empty-hint">还没有版本下载</div>
-            <div v-else class="rank-list">
-              <div
-                v-for="(item, i) in downloadVersionRanking"
-                :key="item.id"
-                class="rank-item"
-              >
-                <span class="rank-num">{{ i + 1 }}</span>
-                <div class="rank-info">
-                  <strong>{{ item.label }}</strong>
-                  <small>{{ item.total }} 次下载{{ item.today ? ` · 今日 ${item.today}` : '' }}</small>
+            </section>
+            <section class="rank-section">
+              <div class="panel-subtitle">版本</div>
+              <div v-if="!downloadVersionRanking.length" class="empty-hint">还没有版本下载</div>
+              <div v-else class="rank-list">
+                <div v-for="(item, i) in downloadVersionRanking" :key="item.id" class="rank-item">
+                  <span class="rank-num">{{ i + 1 }}</span>
+                  <div class="rank-info">
+                    <strong>{{ item.label }}</strong>
+                    <small
+                      >{{ item.total }} 次下载{{ item.today ? ` · 今日 ${item.today}` : '' }}</small
+                    >
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
-        </div>
-      </section>
-    </div>
+            </section>
+          </div>
+        </section>
+      </div>
 
-    <!-- Loading / Offline states -->
-    <div v-if="analyticsState === 'loading'" class="state-overlay">
-      <div class="state-spinner" />
-      <span>正在加载</span>
-    </div>
-    <div v-else-if="analyticsState === 'offline'" class="state-overlay offline">
-      <span>统计暂时不可用</span>
-    </div>
+      <!-- Loading / Offline states -->
+      <div v-if="analyticsState === 'loading'" class="state-overlay">
+        <div class="state-spinner" />
+        <span>正在加载</span>
+      </div>
+      <div v-else-if="analyticsState === 'offline'" class="state-overlay offline">
+        <span>统计暂时不可用</span>
+      </div>
     </template>
   </div>
 </template>
@@ -1536,7 +1529,9 @@ watch(cities, () => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Responsive ───────────────────────────────────────── */

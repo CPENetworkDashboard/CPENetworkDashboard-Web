@@ -19,7 +19,6 @@
   text-align: left;
   user-select: none;
   pointer-events: none;
-  transform-style: preserve-3d;
   transform: rotateX(calc(var(--e) * 52deg)) rotateZ(calc(var(--e) * -34deg))
     scale(calc(1 - var(--e) * 0.16));
 }
@@ -42,9 +41,9 @@
   --q-fair: #ffcb6b;
   --q-poor: #ffa057;
   --q-bad: #ff8a80;
-  --glass: rgba(255, 255, 255, 0.07);
-  --glass-edge: rgba(255, 255, 255, 0.38);
-  --lens: rgba(255, 255, 255, 0.1);
+  --glass: rgba(12, 14, 16, 0.22);
+  --glass-edge: rgba(255, 255, 255, 0.4);
+  --lens: rgba(255, 255, 255, 0.06);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -55,7 +54,6 @@
   color: var(--p-text);
   font-size: 14px;
   line-height: 1.35;
-  transform-style: preserve-3d;
 }
 .pm-screen.clip {
   overflow: hidden;
@@ -79,9 +77,9 @@
   --q-fair: #8a5a00;
   --q-poor: #c2410c;
   --q-bad: #b42318;
-  --glass: rgba(255, 255, 255, 0.3);
-  --glass-edge: rgba(255, 255, 255, 0.95);
-  --lens: rgba(255, 255, 255, 0.5);
+  --glass: rgba(255, 255, 255, 0.18);
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --lens: rgba(255, 255, 255, 0.34);
 }
 .pm-screen.wiped {
   position: absolute;
@@ -228,7 +226,6 @@
   min-height: 0;
   padding-top: 6px;
   clip-path: inset(-400px -400px 0 -400px);
-  transform-style: preserve-3d;
 }
 .pm-card {
   position: relative;
@@ -485,16 +482,14 @@
   padding: 4px;
   border-radius: 32px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 38%),
-    var(--glass, rgba(255, 255, 255, 0.08));
-  backdrop-filter: blur(11px) saturate(1.7);
-  -webkit-backdrop-filter: blur(11px) saturate(1.7);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 45%),
+    var(--glass, rgba(12, 14, 16, 0.22));
+  backdrop-filter: blur(12px) saturate(1.9) brightness(0.92);
   box-shadow:
-    inset 0 1px 0.5px var(--glass-edge, rgba(255, 255, 255, 0.55)),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.12),
-    inset 0 0 10px rgba(255, 255, 255, 0.08),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.18),
-    0 10px 24px -14px rgba(0, 0, 0, 0.28);
+    inset 0 0.5px 0 var(--glass-edge, rgba(255, 255, 255, 0.4)),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.07),
+    0 14px 30px -14px rgba(0, 0, 0, 0.6);
 }
 .pm-dock {
   position: absolute;
@@ -541,15 +536,14 @@
   height: 56px;
   border-radius: 28px;
   background:
-    radial-gradient(90% 60% at 50% 0%, rgba(255, 255, 255, 0.22), transparent 70%),
-    var(--lens, rgba(255, 255, 255, 0.12));
-  backdrop-filter: saturate(1.5) brightness(1.06);
-  -webkit-backdrop-filter: saturate(1.5) brightness(1.06);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02) 70%),
+    var(--lens, rgba(255, 255, 255, 0.06));
+  backdrop-filter: saturate(1.6) brightness(1.12);
   box-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.6),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.18),
-    inset 0 0 8px rgba(255, 255, 255, 0.1),
-    0 4px 10px -6px rgba(0, 0, 0, 0.18);
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.1),
+    0 4px 12px -6px rgba(0, 0, 0, 0.35);
   transform: translateX(calc(var(--i) * 76px)) scale(var(--ls), calc(2 - var(--ls)));
   transition: transform 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
@@ -821,4 +815,11 @@
 .pm-screen.light .pm-lens,
 :root:not([data-theme='dark']) .story-dock .pm-lens {
   --lens: rgba(255, 255, 255, 0.34);
+}
+
+/* 3D only while exploded: preserve-3d disables the dock's backdrop blur. */
+.pm.exploding,
+.pm.exploding .pm-screen,
+.pm.exploding .pm-body {
+  transform-style: preserve-3d;
 }

@@ -44,6 +44,12 @@ const dock: Array<[Page, string]> = [
   ['settings', '设置'],
 ]
 const overlay = computed(() => (props.theme === 'dark' ? 'light' : 'dark'))
+const wiping = computed(() => (props.wipe ?? 0) > 0 && (props.wipe ?? 0) < 1)
+const layers = computed(() =>
+  wiping.value
+    ? [props.theme, overlay.value]
+    : [(props.wipe ?? 0) >= 1 ? overlay.value : props.theme]
+)
 const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === props.page))
 </script>
 
@@ -55,15 +61,15 @@ const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === prop
     aria-hidden="true"
   >
     <div
-      v-for="layer in wipe > 0 ? [theme, overlay] : [theme]"
+      v-for="layer in layers"
       :key="layer"
       class="pm-screen"
       :class="[
         layer,
-        { clip: explode === 0 && !spill, wiped: layer === overlay && wipe > 0, wall: wallpaper },
+        { clip: explode === 0 && !spill, wiped: layer === overlay && wiping, wall: wallpaper },
       ]"
       :style="
-        layer === overlay && wipe > 0
+        layer === overlay && wiping
           ? { clipPath: `inset(${(1 - wipe) * 100}% 0 0 0 round 46px)` }
           : undefined
       "

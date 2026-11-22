@@ -831,6 +831,9 @@ html.story-snap {
   opacity: 1;
 }
 @media (max-width: 760px) {
+  .story-scroll {
+    display: none;
+  }
   .story-dock {
     transform: translateX(-50%) translateY(calc((1 - var(--z)) * 60px))
       scale(calc(0.6 + var(--z) * 0.45));
