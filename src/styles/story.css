@@ -729,6 +729,9 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .story-steps li:not(.on) {
+    display: grid;
+  }
   .roll-strip,
   .pm-lens,
   .story-toast,
