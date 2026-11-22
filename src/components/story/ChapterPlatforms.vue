@@ -3,8 +3,6 @@ import { computed, toRef } from 'vue'
 import AppMock from './AppMock.vue'
 import FitBox from './FitBox.vue'
 import MetricTile from './MetricTile.vue'
-import PhoneConnect from './PhoneConnect.vue'
-import PhoneMock from './PhoneMock.vue'
 import { finalPower, finalRadio } from './data'
 import { ease, span } from './quality'
 
@@ -15,7 +13,7 @@ const wipe = computed(() => ease(span(t.value, 0.56, 0.9)))
 </script>
 
 <template>
-  <div class="story-layer" :class="{ on }">
+  <div class="story-layer back" :class="{ on }" aria-hidden="true">
     <div class="story-desktop" :style="{ '--s': slide }">
       <FitBox :width="1040">
         <AppMock page="connect" :theme="wipe > 0.5 ? (theme === 'dark' ? 'light' : 'dark') : theme">
@@ -52,13 +50,6 @@ const wipe = computed(() => ease(span(t.value, 0.56, 0.9)))
             </div>
           </section>
         </AppMock>
-      </FitBox>
-    </div>
-    <div class="story-front" :style="{ '--s': slide }">
-      <FitBox :width="410" fit-height>
-        <PhoneMock :theme page="connect" :wipe>
-          <PhoneConnect :radio="finalRadio" :power="finalPower" />
-        </PhoneMock>
       </FitBox>
     </div>
   </div>

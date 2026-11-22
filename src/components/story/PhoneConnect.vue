@@ -19,8 +19,12 @@ withDefaults(
 </script>
 
 <template>
-  <div class="pm-card pm-overview" :class="{ 'pm-layer': layered, dim: focus }" style="--z: 2">
-    <span v-if="layered" class="am-tag pm-tag">连接概览</span>
+  <div
+    class="pm-card pm-overview"
+    :class="{ 'pm-layer': layered, dim: focus }"
+    style="--z: 1.3; --fy: -12px"
+  >
+    <span v-if="layered" class="pm-tag left" style="--tz: 1.3"><b>连接概览</b><i></i></span>
     <div class="pm-head">
       <h4>中国移动:46000 - 5G SA</h4>
       <span class="pm-sig"><i></i><i></i><i></i><i></i><i></i><b>5G</b></span>
@@ -31,9 +35,9 @@ withDefaults(
   <div
     class="pm-card"
     :class="{ 'pm-layer': layered, glow: focus === 'cell', dim: focus && focus !== 'cell' }"
-    style="--z: 3"
+    style="--z: 2.35; --fy: -4px"
   >
-    <span v-if="layered" class="am-tag pm-tag">当前小区</span>
+    <span v-if="layered" class="pm-tag right" style="--tz: 2.35"><i></i><b>当前小区</b></span>
     <h4>当前小区（NR PCC）</h4>
     <div class="pm-grid c3">
       <PhoneTile v-for="[label, value] in cellFacts" :key="label" :label :value :w="W.c3" />
@@ -47,9 +51,9 @@ withDefaults(
       dim: focus && focus !== 'radio',
       popped: pop > 0,
     }"
-    :style="{ '--z': 4, '--k': pop }"
+    :style="{ '--z': 3.45, '--fy': '6px', '--k': pop }"
   >
-    <span v-if="layered" class="am-tag pm-tag">射频质量</span>
+    <span v-if="layered" class="pm-tag left" style="--tz: 3.45"><b>射频质量</b><i></i></span>
     <h4>射频质量（NR PCC）</h4>
     <div class="pm-grid c3">
       <div v-for="m in radio.slice(0, 3)" :key="m.label" class="pm-cell">
@@ -67,15 +71,19 @@ withDefaults(
   <div
     class="pm-card"
     :class="{ 'pm-layer': layered, glow: focus === 'power', dim: focus && focus !== 'power' }"
-    style="--z: 5"
+    style="--z: 4.5; --fy: 16px"
   >
-    <span v-if="layered" class="am-tag pm-tag">当前功率</span>
+    <span v-if="layered" class="pm-tag right" style="--tz: 4.5"><i></i><b>当前功率</b></span>
     <h4>当前功率（NR PCC）</h4>
     <div class="pm-grid c4">
       <PhoneTile v-for="m in power" :key="m.label" v-bind="m" :w="W.c4" :mode />
     </div>
   </div>
-  <div class="pm-card pm-link" :class="{ 'pm-layer': layered, dim: focus }" style="--z: 3">
+  <div
+    class="pm-card pm-link"
+    :class="{ 'pm-layer': layered, dim: focus }"
+    style="--z: 0.65; --fy: 0px"
+  >
     <div>
       <h4>下行链路（NR PCC）</h4>
       <p>MCS 16<br />RANK 2</p>

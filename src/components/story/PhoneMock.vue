@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 type Page = 'connect' | 'lock' | 'test' | 'settings'
 const props = withDefaults(
@@ -17,6 +17,7 @@ const props = withDefaults(
     /** Position of the glass lens over the dock, defaults to the current page. */
     lens?: number
     lensScale?: number
+    dockFocus?: number
   }>(),
   {
     explode: 0,
@@ -29,6 +30,7 @@ const props = withDefaults(
     spill: false,
     lens: undefined,
     lensScale: 1,
+    dockFocus: 0,
   }
 )
 const icons: Record<string, string> = {
@@ -43,6 +45,25 @@ const dock: Array<[Page, string]> = [
   ['test', '测试'],
   ['settings', '设置'],
 ]
+/* Keep preserve-3d alive briefly after the fold finishes so the 3D→flat
+   compositing switch happens while nothing is visibly moving; switching it
+   mid-fold makes the glass dock pop. */
+const is3d = ref(false)
+let t3d: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => props.explode,
+  (e) => {
+    if (e > 0.005) {
+      clearTimeout(t3d)
+      is3d.value = true
+    } else if (is3d.value) {
+      clearTimeout(t3d)
+      t3d = setTimeout(() => (is3d.value = false), 350)
+    }
+  },
+  { immediate: true }
+)
+onUnmounted(() => clearTimeout(t3d))
 const overlay = computed(() => (props.theme === 'dark' ? 'light' : 'dark'))
 const wiping = computed(() => (props.wipe ?? 0) > 0 && (props.wipe ?? 0) < 1)
 const layers = computed(() =>
@@ -56,8 +77,8 @@ const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === prop
 <template>
   <div
     class="pm"
-    :class="{ exploding: explode > 0 }"
-    :style="{ '--e': explode }"
+    :class="{ exploding: is3d, 'dock-hi': dockFocus > 0.01 }"
+    :style="{ '--e': explode, '--df': dockFocus }"
     aria-hidden="true"
   >
     <div
@@ -66,7 +87,7 @@ const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === prop
       class="pm-screen"
       :class="[
         layer,
-        { clip: explode === 0 && !spill, wiped: layer === overlay && wiping, wall: wallpaper },
+        { clip: !is3d && !spill, wiped: layer === overlay && wiping, wall: wallpaper },
       ]"
       :style="
         layer === overlay && wiping
@@ -74,23 +95,25 @@ const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === prop
           : undefined
       "
     >
-      <div class="pm-status pm-layer" style="--z: 1">
-        <b>18:00</b><i class="pm-camera"></i>
+      <div class="pm-status pm-layer" style="--z: 0.5; --fy: -6px">
+        <b>18:00</b>
         <span class="pm-icons"
           ><small>5G</small><i class="sig"></i><i class="wifi"></i><i class="bat">96</i></span
         >
       </div>
-      <header v-if="title" class="pm-title pm-layer" style="--z: 2">
+      <header v-if="title" class="pm-title pm-layer" style="--z: 1">
         <i></i><b>{{ title }}</b>
       </header>
-      <nav v-if="tabs.length" class="pm-tabs pm-layer" style="--z: 2">
+      <nav v-if="tabs.length" class="pm-tabs pm-layer" style="--z: 1">
         <span v-for="(name, index) in tabs" :key="name" :class="{ on: index === tab }">{{
           name
         }}</span>
       </nav>
       <div class="pm-body"><slot /></div>
-      <div class="pm-dock pm-layer" style="--z: 5">
-        <span class="am-tag pm-tag">液态玻璃底栏</span>
+      <div class="pm-dock pm-layer" style="--z: 5.6; --fy: 66px">
+        <span v-if="explode > 0.01" class="pm-tag left" style="--tz: 5.6"
+          ><b>液态玻璃底栏</b><i></i
+        ></span>
         <i class="pm-lens" :style="{ '--i': lensAt, '--ls': lensScale }"></i>
         <span
           v-for="([id, label], index) in dock"

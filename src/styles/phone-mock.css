@@ -1,6 +1,7 @@
 /* Static mock of the CPE加加 Android client (Compose / Miuix, v3.7). */
 .pm {
   --e: 0;
+  --df: 0;
   position: relative;
   width: 410px;
   padding: 10px;
@@ -19,8 +20,9 @@
   text-align: left;
   user-select: none;
   pointer-events: none;
-  transform: rotateX(calc(var(--e) * 52deg)) rotateZ(calc(var(--e) * -34deg))
-    scale(calc(1 - var(--e) * 0.16));
+  transition:
+    box-shadow 0.4s ease,
+    background-color 0.4s ease;
 }
 .pm-screen {
   --p-bg: #111214;
@@ -105,47 +107,120 @@
   background: color-mix(in srgb, var(--p-tile) calc(100% - var(--w, 0) * 40%), transparent);
 }
 .pm-layer {
+  --fy: 0px;
   position: relative;
-  /* Higher layers lift later, so the stack fans out instead of moving as one block. */
-  transform: translateZ(calc(clamp(0, var(--e) * 1.5 - var(--z) * 0.1, 1) * var(--z) * 64px));
+  /* Progressive multi-height 3D terrace: each layer steps out to its own distinct Z depth. */
+  transform: translate3d(
+    0,
+    calc(clamp(0, var(--e) * 1.45 - var(--z) * 0.08, 1) * var(--fy)),
+    calc(clamp(0, var(--e) * 1.45 - var(--z) * 0.08, 1) * var(--z) * 46px)
+  );
 }
 .pm.exploding {
-  transform: perspective(2400px) rotateX(calc(var(--e) * 54deg)) rotateZ(calc(var(--e) * -32deg))
-    scale(calc(1 - var(--e) * 0.16));
-}
-.pm.exploding .pm-card.pm-layer,
-.pm.exploding .pm-dock {
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, calc(var(--e) * 0.18)),
-    0 calc(var(--e) * 40px) 50px -16px rgba(0, 0, 0, 0.7);
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.2),
+    14px 14px 0 #14171b,
+    15px 15px 0 1px rgba(255, 255, 255, 0.08),
+    28px 44px 90px -18px rgba(0, 0, 0, 0.92);
+  transform: perspective(2000px) rotateY(calc(var(--e) * -28deg)) rotateX(calc(var(--e) * 26deg))
+    rotateZ(calc(var(--e) * 8deg)) translateX(calc(var(--e) * 28px))
+    scale(calc(1 - var(--e) * 0.14));
+}
+.pm.exploding .pm-screen {
+  background:
+    radial-gradient(60% 50% at 50% 45%, rgba(139, 199, 172, 0.08), transparent 72%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px), #0c0e11;
+  background-size:
+    auto,
+    24px 24px,
+    24px 24px,
+    auto;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.pm.exploding .pm-card.pm-layer {
+  background: rgba(29, 32, 37, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, calc(var(--e) * 0.24)),
+    inset -1px 0 0 rgba(255, 255, 255, calc(var(--e) * 0.12)),
+    0 0 0 1px rgba(156, 200, 255, calc(var(--e) * 0.22)),
+    calc(var(--e) * (10px + var(--z) * 5px)) calc(var(--e) * (12px + var(--z) * 5px))
+      calc(var(--e) * 32px) -8px rgba(0, 0, 0, 0.82);
+}
+.pm.exploding .pm-dock {
+  /* Identical glass recipe as the base: only the shadow changes, so the
+     preserve-3d flatten/unflatten never pops the dock's appearance. */
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge, rgba(255, 255, 255, 0.6)),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(156, 200, 255, calc(var(--e) * 0.22)),
+    calc(var(--e) * 32px) calc(var(--e) * 38px) 48px -10px rgba(0, 0, 0, 0.75);
 }
 .pm-tag {
-  left: 8px;
-  top: -46px;
-  z-index: 2;
-  padding: 7px 16px;
-  border: 0;
-  background: rgba(250, 249, 245, 0.94);
-  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
-  color: #17191c;
-  font-size: 20px;
-  opacity: clamp(0, calc((var(--e) - 0.55) * 3), 1);
+  position: absolute;
+  top: 50%;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  opacity: clamp(0, calc((var(--e) - 0.16 - var(--tz, 2) * 0.09) * 3.4), 1);
+  transform-style: preserve-3d;
+  transform: translateY(-50%) rotateZ(calc(var(--e) * -8deg)) rotateX(calc(var(--e) * -26deg))
+    rotateY(calc(var(--e) * 28deg));
+}
+.pm-tag.left {
+  right: calc(100% + 14px);
+  transform-origin: right center;
+}
+.pm-tag.right {
+  left: calc(100% + 14px);
+  transform-origin: left center;
+}
+.pm-tag b {
+  padding: 5px 12px;
+  border: 1px solid rgba(139, 199, 172, 0.36);
+  border-radius: 999px;
+  background: rgba(12, 17, 15, 0.88);
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.75);
+  color: #eef3ee;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.pm-tag i {
+  position: relative;
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(139, 199, 172, 0.25), rgba(139, 199, 172, 0.85));
+}
+.pm-tag.right i {
+  background: linear-gradient(90deg, rgba(139, 199, 172, 0.85), rgba(139, 199, 172, 0.25));
+}
+.pm-tag i::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8bc7ac;
+  box-shadow: 0 0 0 3px rgba(139, 199, 172, 0.24);
+}
+.pm-tag.left i::after {
+  right: -3px;
+}
+.pm-tag.right i::after {
+  left: -3px;
 }
 .pm-status {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: space-between;
-  height: 46px;
+  height: 42px;
   padding: 6px 22px 0;
   font-size: 14px;
-}
-.pm-camera {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #05070a;
-  box-shadow: inset 0 0 0 2px #1c222b;
 }
 .pm-icons {
   display: flex;
@@ -234,21 +309,28 @@
   display: grid;
   flex: 1;
   align-content: start;
-  gap: 12px;
+  gap: 9px;
   min-height: 0;
-  padding-top: 6px;
+  padding-top: 4px;
+  transition: opacity 0.3s ease;
+}
+.pm:not(.exploding) .pm-body {
   clip-path: inset(-400px -400px 0 -400px);
+}
+.pm.dock-hi .pm-body {
+  opacity: calc(1 - var(--df) * 0.32);
 }
 .pm-card {
   position: relative;
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 11px 14px;
   border: 1px solid var(--p-card-line);
   border-radius: 22px;
   background: var(--p-card);
   transition:
     opacity 0.35s,
+    border-color 0.35s,
     box-shadow 0.35s;
 }
 .pm-card > h4,
@@ -307,10 +389,10 @@
   font-size: 14.5px;
 }
 .pm-ambr span {
-  padding: 8px 16px;
-  border-radius: 14px;
+  padding: 6px 14px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--p-text) 10%, transparent);
-  font-size: 16px;
+  font-size: 15px;
 }
 .pm-ok {
   justify-self: start;
@@ -487,29 +569,34 @@
 }
 
 /* Liquid glass dock (BottomBarStyle.LiquidGlass) */
-.pm-dock,
-.story-dock {
+.pm-dock {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 3;
   display: flex;
-  height: 64px;
+  width: 312px;
+  height: 62px;
+  margin-left: -156px;
   padding: 4px;
-  border-radius: 32px;
+  border-radius: 31px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 45%),
     var(--glass, rgba(12, 14, 16, 0.22));
   backdrop-filter: blur(12px) saturate(1.9) brightness(0.92);
+  -webkit-backdrop-filter: blur(12px) saturate(1.9) brightness(0.92);
   box-shadow:
     inset 0 0.5px 0 var(--glass-edge, rgba(255, 255, 255, 0.4)),
     inset 0 -0.5px 0 rgba(255, 255, 255, 0.08),
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.07),
     0 14px 30px -14px rgba(0, 0, 0, 0.6);
 }
-.pm-dock {
-  position: absolute;
-  left: 50%;
-  bottom: 22px;
-  width: 312px;
-  margin-left: -156px;
-  z-index: 3;
+.pm.dock-hi .pm-dock {
+  transform: translateY(calc(var(--df) * -6px)) scale(calc(1 + var(--df) * 0.06));
+  box-shadow:
+    inset 0 1px 0 var(--glass-edge, rgba(255, 255, 255, 0.65)),
+    0 0 0 calc(var(--df) * 1.5px) color-mix(in srgb, var(--p-title) 45%, transparent),
+    0 20px 38px -12px rgba(0, 0, 0, 0.45);
 }
 .pm-tab {
   position: relative;
@@ -545,8 +632,8 @@
   left: 4px;
   top: 4px;
   width: 76px;
-  height: 56px;
-  border-radius: 28px;
+  height: 54px;
+  border-radius: 27px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02) 70%),
     var(--lens, rgba(255, 255, 255, 0.06));
@@ -561,6 +648,82 @@
 }
 
 /* Lock page */
+.pm-card.glow-ok {
+  border-color: color-mix(in srgb, var(--p-ok) 55%, transparent);
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--p-ok) 65%, transparent),
+    0 0 32px -8px color-mix(in srgb, var(--p-ok) 40%, transparent);
+}
+.pm-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pm-card-head h4 {
+  margin: 0;
+  color: var(--p-title);
+  font-size: 16.5px;
+  font-weight: 600;
+}
+.pm-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pm-status-pill.idle {
+  background: color-mix(in srgb, var(--p-text) 8%, transparent);
+  color: var(--p-muted);
+}
+.pm-status-pill.ready,
+.pm-status-pill.busy {
+  background: color-mix(in srgb, var(--p-title) 16%, transparent);
+  color: var(--p-title);
+}
+.pm-status-pill.ok {
+  background: color-mix(in srgb, var(--p-ok) 18%, transparent);
+  color: var(--p-ok);
+}
+.pm-rules {
+  display: grid;
+  gap: 6px;
+}
+.pm-rules > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 11px;
+  border: 1px solid var(--p-tile-line);
+  border-radius: 11px;
+  background: var(--p-tile);
+  font-size: 13px;
+}
+.pm-rules span {
+  color: var(--p-muted);
+  font-weight: 600;
+}
+.pm-rules b {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.pm-rules > div.active {
+  border-color: color-mix(in srgb, var(--p-title) 50%, transparent);
+  color: var(--p-title);
+}
+.pm-rules > div.verified {
+  border-color: color-mix(in srgb, var(--p-ok) 50%, transparent);
+  background: color-mix(in srgb, var(--p-ok) 10%, var(--p-tile));
+  color: var(--p-ok);
+}
+.pm-band.locked {
+  border-color: var(--p-ok);
+}
 .pm-lines {
   margin: 0;
   color: var(--p-text);
@@ -810,28 +973,23 @@
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
-.pm-screen.light .pm-dock,
-.pm-screen.light ~ .story-dock,
-:root:not([data-theme='dark']) .story-dock {
+.pm-screen.light .pm-dock {
   --glass: rgba(255, 255, 255, 0.18);
   --glass-edge: rgba(255, 255, 255, 0.9);
   box-shadow:
     inset 0 1px 0.5px var(--glass-edge),
-    inset 0 0 12px rgba(255, 255, 255, 0.22),
-    0 0 0 0.5px rgba(20, 30, 24, 0.06),
+    inset 0 0 12px rgba(255, 255, 255, 0.24),
+    0 0 0 0.5px rgba(20, 30, 24, 0.07),
     0 12px 28px -16px rgba(20, 30, 24, 0.22);
 }
-:root:not([data-theme='dark']) .story-dock {
-  color: #16181c;
-}
-.pm-screen.light .pm-lens,
-:root:not([data-theme='dark']) .story-dock .pm-lens {
-  --lens: rgba(255, 255, 255, 0.34);
+.pm-screen.light .pm-lens {
+  --lens: rgba(255, 255, 255, 0.4);
 }
 
 /* 3D only while exploded: preserve-3d disables the dock's backdrop blur. */
 .pm.exploding,
 .pm.exploding .pm-screen,
-.pm.exploding .pm-body {
+.pm.exploding .pm-body,
+.pm.exploding .pm-layer {
   transform-style: preserve-3d;
 }

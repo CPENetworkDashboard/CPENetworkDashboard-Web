@@ -9,8 +9,12 @@ import ChapterPlatforms from './ChapterPlatforms.vue'
 import ChapterStyle from './ChapterStyle.vue'
 import ChapterTest from './ChapterTest.vue'
 import ChapterTools from './ChapterTools.vue'
+import FitBox from './FitBox.vue'
+import PhoneConnect from './PhoneConnect.vue'
+import PhoneMock from './PhoneMock.vue'
 import StoryHero from './StoryHero.vue'
-import { span } from './quality'
+import { finalPower, finalRadio } from './data'
+import { clamp, ease, pop, span } from './quality'
 
 defineProps<{ versions: Array<{ name: string; version?: string }> }>()
 
@@ -24,7 +28,7 @@ interface Chapter {
   marks: number[]
   duration: number
 }
-const hero = { id: 'story-top', duration: 5600 }
+const hero = { id: 'story-top', duration: 7200 }
 const chapters: Chapter[] = [
   {
     id: 'story-connect',
@@ -108,10 +112,12 @@ const chapters: Chapter[] = [
 const scenes = [hero, ...chapters]
 const theme = useSiteTheme()
 
-// One pinned stage for the whole story: scrolling picks the scene, each scene then plays by itself.
+// One pinned stage and one persistent phone for the whole story.
 const track = ref<HTMLElement | null>(null)
 const active = ref(0)
 const inside = ref(true)
+const sceneScroll = ref(0)
+const reduced = ref(false)
 const t = ref(0)
 let frame = 0
 let start = 0
@@ -120,7 +126,7 @@ const tick = (now: number) => {
   t.value = Math.min(1, (now - start) / scenes[active.value]!.duration)
   // The hero keeps breathing apart and back together while it is on screen.
   if (t.value >= 1 && active.value === 0) {
-    start = now + 600
+    start = now + 500
     t.value = 0
   }
   frame = t.value < 1 || active.value === 0 ? requestAnimationFrame(tick) : 0
@@ -142,7 +148,7 @@ function play(delay = 0) {
   frame = requestAnimationFrame(tick)
 }
 // Scrolling back shows the finished scene instead of blanking it and replaying.
-watch(active, (now, before) => (now < before && now > 0 ? finish() : play(80)))
+watch(active, (now, before) => (now < before && now > 0 ? finish() : play(60)))
 const tFor = (index: number) =>
   index === active.value ? Math.max(0, t.value) : index < active.value ? 1 : 0
 const step = (chapter: Chapter, index: number) =>
@@ -154,16 +160,75 @@ const charAt = (lines: string[], row: number, index: number, r: number) => {
   return Math.min(1, Math.max(0, r * total * 1.25 - offset - index))
 }
 
+// Single-phone state across all 7 scenes (00 Hero -> 06 Platforms).
+const heroBreath = computed(() => {
+  if (reduced.value) return 0.9
+  const open = ease(span(tFor(0), 0.04, 0.28))
+  const close = 1 - ease(span(tFor(0), 0.8, 0.97))
+  const hover = 1 - Math.sin(span(tFor(0), 0.28, 0.8) * Math.PI) * 0.05
+  return open * close * hover
+})
+const heroExplode = computed(() =>
+  active.value === 0 ? heroBreath.value * (1 - ease(span(sceneScroll.value, 0.12, 0.92))) : 0
+)
+const phonePage = computed<'connect' | 'lock' | 'test' | 'settings'>(() =>
+  active.value === 2 ? 'lock' : active.value === 3 || active.value === 4 ? 'test' : 'connect'
+)
+const phoneTheme = computed<'dark' | 'light'>(() => (active.value === 0 ? 'dark' : theme.value))
+const phoneTabs = computed(() =>
+  active.value === 2 ? ['网络首选', '锁频段', '锁ARFCN', '锁PCI'] : []
+)
+const phoneTitle = computed(() =>
+  active.value === 3 ? (tFor(3) < 0.5 ? '测速' : 'Ping') : active.value === 4 ? 'Wi-Fi 信道' : ''
+)
+const tStyle = computed(() => tFor(5))
+const styleHop = computed(() => span(tStyle.value, 0.08, 0.4) * 3)
+const phoneLens = computed(() => {
+  if (active.value !== 5) return undefined
+  const index = Math.floor(styleHop.value)
+  return Math.min(3, index + ease(clamp((styleHop.value - index) * 2.2)))
+})
+const phoneLensScale = computed(() => {
+  if (active.value !== 5) return 1
+  const frac = clamp((styleHop.value - Math.floor(styleHop.value)) * 2.2)
+  return styleHop.value >= 3 ? 1 : 1 + Math.sin(frac * Math.PI) * 0.18
+})
+const styleDockFocus = computed(() =>
+  active.value === 5
+    ? pop(span(tStyle.value, 0.02, 0.14)) * (1 - ease(span(tStyle.value, 0.38, 0.46)))
+    : 0
+)
+const styleWall = computed(() =>
+  active.value === 5
+    ? 0.22 * ease(span(tStyle.value, 0.02, 0.2)) + 0.78 * ease(span(tStyle.value, 0.44, 0.64))
+    : 0
+)
+const platformSlide = computed(() => (active.value === 6 ? ease(span(tFor(6), 0.04, 0.4)) : 0))
+const platformWipe = computed(() => (active.value === 6 ? ease(span(tFor(6), 0.56, 0.9)) : 0))
+
 let scrollFrame = 0
 const measure = () => {
   scrollFrame = 0
   const element = track.value
   if (!element) return
   const rect = element.getBoundingClientRect()
-  const vh = element.querySelector<HTMLElement>('.story-anchor')?.offsetHeight || window.innerHeight
-  const index = Math.floor((-rect.top + vh * 0.5) / vh)
-  active.value = Math.min(scenes.length - 1, Math.max(0, index))
-  inside.value = rect.top < vh * 0.5 && rect.bottom > vh * 0.5
+  const stickyH =
+    element.querySelector<HTMLElement>('.story-sticky')?.offsetHeight || window.innerHeight
+  const anchors = element.querySelectorAll<HTMLElement>('.story-anchor')
+  if (!anchors.length) return
+  const scrolled = Math.max(0, -rect.top)
+  let nextActive = 0
+  for (let i = 1; i < anchors.length; i++) {
+    if (scrolled >= anchors[i]!.offsetTop) nextActive = i
+  }
+  const curStart = anchors[nextActive]!.offsetTop
+  const curEnd =
+    nextActive + 1 < anchors.length
+      ? anchors[nextActive + 1]!.offsetTop
+      : Math.max(curStart + 1, element.offsetHeight - stickyH)
+  sceneScroll.value = clamp((scrolled - curStart) / Math.max(1, curEnd - curStart))
+  active.value = nextActive
+  inside.value = rect.top < stickyH * 0.5 && rect.bottom > stickyH * 0.6
 }
 const onScroll = () => {
   if (!scrollFrame) scrollFrame = requestAnimationFrame(measure)
@@ -172,10 +237,12 @@ const rail = computed(() => (inside.value && active.value > 0 ? active.value - 1
 const railProgress = (index: number) =>
   index + 1 < active.value ? 1 : index + 1 === active.value ? t.value : 0
 function jump(index: number) {
-  const element = document.getElementById(chapters[index]!.id)
-  if (!element) return
+  const element = track.value
+  const anchor = document.getElementById(chapters[index]!.id)
+  if (!element || !anchor) return
+  const trackTop = element.getBoundingClientRect().top + window.scrollY
   window.scrollTo({
-    top: element.getBoundingClientRect().top + window.scrollY,
+    top: trackTop + anchor.offsetTop + 12,
     behavior: reduce ? 'auto' : 'smooth',
   })
 }
@@ -185,11 +252,12 @@ let query: MediaQueryList | undefined
 const onQuery = () => (narrow.value = !!query?.matches)
 onMounted(() => {
   reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  reduced.value = reduce
   query = window.matchMedia('(max-width: 760px)')
   onQuery()
   query.addEventListener('change', onQuery)
   measure()
-  play(700)
+  play(260)
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onScroll, { passive: true })
 })
@@ -273,13 +341,59 @@ onUnmounted(() => {
           </header>
         </div>
         <div class="story-stagebox">
-          <StoryHero :t="tFor(0)" :on="active === 0" />
-          <ChapterConnect :t="tFor(1)" :on="active === 1" :theme />
-          <ChapterLock :t="tFor(2)" :on="active === 2" :theme />
-          <ChapterTest :t="tFor(3)" :on="active === 3" :theme />
-          <ChapterTools :t="tFor(4)" :on="active === 4" :theme />
-          <ChapterStyle :t="tFor(5)" :on="active === 5" :theme />
+          <i
+            class="story-ring"
+            :class="{ on: active === 0 }"
+            :style="{ '--e': heroExplode }"
+            aria-hidden="true"
+          ></i>
+          <ChapterTest :t="tFor(3)" :on="active === 3" mode="back" />
           <ChapterPlatforms :t="tFor(6)" :on="active === 6" :theme />
+
+          <div
+            class="story-phone"
+            :class="{ hero: active === 0, platforms: active === 6 }"
+            :style="{
+              '--sp': sceneScroll,
+              '--t': t,
+              '--w': styleWall,
+              '--s': platformSlide,
+            }"
+          >
+            <FitBox :width="410" fit-height>
+              <PhoneMock
+                :page="phonePage"
+                :theme="phoneTheme"
+                :explode="heroExplode"
+                :wipe="platformWipe"
+                :tabs="phoneTabs"
+                :tab="1"
+                :title="phoneTitle"
+                :wallpaper="active === 5"
+                :spill="active >= 1 && active <= 4"
+                :lens="phoneLens"
+                :lens-scale="phoneLensScale"
+                :dock-focus="styleDockFocus"
+              >
+                <PhoneConnect
+                  v-if="active === 0 || active === 6"
+                  :radio="finalRadio"
+                  :power="finalPower"
+                  :layered="active === 0"
+                />
+                <ChapterConnect v-else-if="active === 1" :t="tFor(1)" />
+                <ChapterLock v-else-if="active === 2" :t="tFor(2)" mode="screen" />
+                <ChapterTest v-else-if="active === 3" :t="tFor(3)" mode="screen" />
+                <ChapterTools v-else-if="active === 4" :t="tFor(4)" mode="screen" />
+                <ChapterStyle v-else-if="active === 5" :t="tFor(5)" />
+              </PhoneMock>
+            </FitBox>
+          </div>
+
+          <StoryHero :explode="heroExplode" :on="active === 0" />
+          <ChapterLock :t="tFor(2)" :on="active === 2" mode="stage" />
+          <ChapterTest :t="tFor(3)" :on="active === 3" mode="stage" />
+          <ChapterTools :t="tFor(4)" :on="active === 4" mode="stage" />
         </div>
         <span class="story-scroll" :class="{ on: active === 0 }">向下滚动</span>
       </div>

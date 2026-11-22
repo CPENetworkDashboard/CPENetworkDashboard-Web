@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue'
 import SiteIcon from '@/components/SiteIcon.vue'
-import FitBox from './FitBox.vue'
-import PhoneMock from './PhoneMock.vue'
 import { ease, pop, span } from './quality'
 
-const props = defineProps<{ t: number; on: boolean; theme: 'light' | 'dark' }>()
+const props = defineProps<{ t: number; on?: boolean; mode: 'screen' | 'stage' }>()
 const t = toRef(props, 't')
 const deal = computed(() => {
   const open = ease(span(t.value, 0.02, 0.14))
@@ -13,7 +11,7 @@ const deal = computed(() => {
 })
 const phase = computed(() => {
   const v = t.value
-  return v < 0.34 ? 0 : v < 0.44 ? 1 : v < 0.52 ? 2 : v < 0.7 ? 3 : 4
+  return v < 0.34 ? 0 : v < 0.44 ? 1 : v < 0.54 ? 2 : v < 0.7 ? 3 : 4
 })
 const bands = [
   ['N1', '2100 MHz'],
@@ -22,72 +20,89 @@ const bands = [
   ['N78', '3.5 GHz'],
   ['N79', '4.9 GHz'],
 ]
-const lines = computed(() =>
+const statusBadge = computed(() =>
   phase.value === 4
-    ? ['LTE: mode=0 bands=(无)', 'NR:  mode=1 bands=78']
+    ? { cls: 'ok', text: '回读一致' }
     : phase.value === 3
-      ? ['LTE: mode=0 bands=(无)', 'NR:  重新注册中…']
-      : ['LTE: mode=0 bands=(无)', 'NR:  mode=0 bands=(无)']
+      ? { cls: 'busy', text: '重新注册中' }
+      : phase.value === 2
+        ? { cls: 'busy', text: '正在写入' }
+        : phase.value === 1
+          ? { cls: 'ready', text: '待应用 · N78' }
+          : { cls: 'idle', text: '未锁定' }
 )
-const toast = computed(
-  () =>
-    [
-      null,
-      null,
-      { tone: 'info', text: '写入锁频段 N78' },
-      { tone: 'info', text: '设备重新注册中…' },
-      { tone: 'ok', text: '回读校验通过' },
-    ][phase.value]
+const nrRule = computed(() =>
+  phase.value === 4
+    ? 'mode=1 · bands=78 (SA)'
+    : phase.value === 3
+      ? '设备重新注册蜂窝小区…'
+      : 'mode=0 · bands=(无)'
 )
-const giant = computed(() => pop(span(t.value, 0.72, 0.9)))
+const cardShow = computed(() => pop(span(t.value, 0.44, 0.56)))
 </script>
 
 <template>
-  <div class="story-layer" :class="{ on }">
-    <p class="story-giant band" :style="{ '--g': giant }" aria-hidden="true">N78</p>
-    <div class="story-phone" :style="{ '--t': t }">
-      <FitBox :width="410" fit-height>
-        <PhoneMock
-          :theme
-          page="lock"
-          :tabs="['网络首选', '锁频段', '锁ARFCN', '锁PCI']"
-          :tab="1"
-          spill
-        >
-          <div class="pm-card" :class="{ glow: phase >= 3 }">
-            <h4>当前状态</h4>
-            <p class="pm-lines">
-              <template v-for="line in lines" :key="line">{{ line }}<br /></template>
-            </p>
-          </div>
-          <div class="pm-actions">
-            <span>读取</span><span class="fill" :class="{ pressed: phase === 2 }">应用</span>
-          </div>
-          <div class="pm-card">
-            <h4>NR 频段</h4>
-            <div
-              v-for="([band, freq], index) in bands"
-              :key="band"
-              class="pm-band"
-              :class="{ on: band === 'N78' && phase >= 1 }"
-              :style="{
-                transform: `translate3d(${deal * (index - 2) * 150}px, ${deal * (Math.abs(index - 2) * 34 - 40)}px, ${deal * 120}px) rotate(${deal * (index - 2) * 9}deg)`,
-              }"
-            >
-              <div>
-                <b>{{ band }}</b
-                ><small>NR 频段 · {{ freq }}</small>
-              </div>
-              <span>SA</span><span>NSA</span><i></i>
-            </div>
-          </div>
-        </PhoneMock>
-      </FitBox>
+  <template v-if="mode === 'screen'">
+    <div class="pm-card" :class="{ glow: phase === 2 || phase === 3, 'glow-ok': phase === 4 }">
+      <div class="pm-card-head">
+        <h4>当前状态</h4>
+        <span class="pm-status-pill" :class="statusBadge.cls">
+          <i v-if="phase === 2 || phase === 3" class="am-spin"></i>
+          <SiteIcon v-else-if="phase === 4" name="check" :size="13" />
+          {{ statusBadge.text }}
+        </span>
+      </div>
+      <div class="pm-rules">
+        <div><span>LTE</span><b>mode=0 · bands=(无)</b></div>
+        <div :class="{ verified: phase === 4, active: phase === 3 }">
+          <span>NR</span><b>{{ nrRule }}</b>
+        </div>
+      </div>
     </div>
-    <p v-if="toast" :key="toast.text" class="story-toast" :class="toast.tone">
-      <i v-if="phase < 4" class="am-spin"></i><SiteIcon v-else name="check" :size="16" />{{
-        toast.text
-      }}
-    </p>
+    <div class="pm-actions">
+      <span>读取</span><span class="fill" :class="{ pressed: phase === 2 }">应用</span>
+    </div>
+    <div class="pm-card">
+      <h4>NR 频段</h4>
+      <div
+        v-for="([band, freq], index) in bands"
+        :key="band"
+        class="pm-band"
+        :class="{ on: band === 'N78' && phase >= 1, locked: band === 'N78' && phase === 4 }"
+        :style="{
+          transform: `translate3d(${deal * (index - 2) * 140}px, ${deal * (Math.abs(index - 2) * 30 - 36)}px, 0) rotate(${deal * (index - 2) * 8}deg)`,
+        }"
+      >
+        <div>
+          <b>{{ band }}</b
+          ><small>NR 频段 · {{ freq }}</small>
+        </div>
+        <span>SA</span><span>NSA</span><i></i>
+      </div>
+    </div>
+  </template>
+
+  <div v-else class="story-layer" :class="{ on }" aria-hidden="true">
+    <div
+      v-if="phase >= 2"
+      class="story-lock-card"
+      :class="{ ok: phase === 4 }"
+      :style="{ '--c': cardShow }"
+    >
+      <div class="story-lock-eyebrow">
+        <i v-if="phase < 4" class="am-spin"></i>
+        <SiteIcon v-else name="check" :size="15" />
+        <span>{{
+          phase === 2 ? '正在写入锁频配置' : phase === 3 ? '设备重新注册中' : '回读校验通过'
+        }}</span>
+      </div>
+      <div class="story-lock-band">
+        <strong>N78</strong>
+        <span>3.5 GHz · SA</span>
+      </div>
+      <small>{{
+        phase === 4 ? '回读 NR bands=78，与设置一致' : '下发 NR Band 78 锁定指令并驻留'
+      }}</small>
+    </div>
   </div>
 </template>

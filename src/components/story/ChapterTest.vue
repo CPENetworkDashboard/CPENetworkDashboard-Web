@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue'
-import FitBox from './FitBox.vue'
-import PhoneMock from './PhoneMock.vue'
 import PhoneTile from './PhoneTile.vue'
 import RollNumber from './RollNumber.vue'
 import { W } from './data'
 import { ease, pop, span } from './quality'
 
-const props = defineProps<{ t: number; on: boolean; theme: 'light' | 'dark' }>()
+const props = defineProps<{ t: number; on?: boolean; mode: 'screen' | 'stage' | 'back' }>()
 const t = toRef(props, 't')
 
 // Samples jump the way a live multi-thread test does, rather than gliding.
@@ -64,91 +62,76 @@ const pingOut = computed(() => ease(span(t.value, 0.54, 0.62)))
 </script>
 
 <template>
-  <div class="story-layer" :class="{ on }">
+  <template v-if="mode === 'screen'">
+    <template v-if="speed">
+      <div class="pm-card glow">
+        <h4>速率监控</h4>
+        <div class="pm-grid c2">
+          <div v-for="[label, value] in rates" :key="label" class="pm-rate">
+            <span>{{ label }}</span
+            ><strong>{{ value }}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="pm-card">
+        <h4>原生测速</h4>
+        <div class="pm-field">Cloudflare 100MB</div>
+        <p class="pm-note">
+          下载 https://speed.cloudflare.com/__down?bytes=100000000<br />上传
+          https://speed.cloudflare.com/__up
+        </p>
+        <div class="pm-slider">
+          线程数：16<i><s style="width: 26%"></s></i>
+        </div>
+        <div class="pm-switch" :class="{ on: bubble > 0.5 }">
+          <span>悬浮实时速率窗</span><i></i>
+        </div>
+      </div>
+    </template>
+    <template v-else>
+      <div class="pm-card">
+        <h4>Ping</h4>
+        <div class="pm-field plain">www.taobao.com</div>
+        <div class="pm-actions">
+          <span class="fill">{{ pingCount < pingSamples.length ? 'Ping 中…' : '开始 Ping' }}</span>
+        </div>
+      </div>
+      <div class="pm-card">
+        <div class="pm-grid c3">
+          <PhoneTile v-for="[label, value] in pingStats" :key="label" :label :value :w="W.c3" />
+        </div>
+      </div>
+      <div class="pm-card glow">
+        <h4>延迟曲线</h4>
+        <svg class="pm-chart" viewBox="-8 -8 352 146">
+          <path class="grid" d="M0 0H336M0 43H336M0 86H336M0 130H336" />
+          <polyline v-if="phonePoints.length > 1" :points="path(phonePoints)" />
+          <circle v-for="([x, y], index) in phonePoints" :key="index" :cx="x" :cy="y" r="4.5" />
+        </svg>
+      </div>
+    </template>
+  </template>
+
+  <div v-else-if="mode === 'back'" class="story-layer back" :class="{ on }" aria-hidden="true">
     <svg
       class="story-wave"
       viewBox="-20 -20 1040 340"
       preserveAspectRatio="none"
       :style="{ opacity: pingOut }"
-      aria-hidden="true"
     >
       <polyline v-if="wide.length > 1" :points="path(wide)" />
       <circle v-for="([x, y], index) in wide" :key="index" :cx="x" :cy="y" r="7" />
     </svg>
-    <div class="story-phone" :style="{ '--t': t }">
-      <FitBox :width="410" fit-height>
-        <PhoneMock :theme page="test" :title="speed ? '测速' : 'Ping'" spill>
-          <template v-if="speed">
-            <div class="pm-card glow">
-              <h4>速率监控</h4>
-              <div class="pm-grid c2">
-                <div v-for="[label, value] in rates" :key="label" class="pm-rate">
-                  <span>{{ label }}</span
-                  ><strong>{{ value }}</strong>
-                </div>
-              </div>
-            </div>
-            <div class="pm-card">
-              <h4>原生测速</h4>
-              <div class="pm-field">Cloudflare 100MB</div>
-              <p class="pm-note">
-                下载 https://speed.cloudflare.com/__down?bytes=100000000<br />上传
-                https://speed.cloudflare.com/__up
-              </p>
-              <div class="pm-slider">
-                线程数：16<i><s style="width: 26%"></s></i>
-              </div>
-              <div class="pm-switch" :class="{ on: bubble > 0.5 }">
-                <span>悬浮实时速率窗</span><i></i>
-              </div>
-            </div>
-          </template>
-          <template v-else>
-            <div class="pm-card">
-              <h4>Ping</h4>
-              <div class="pm-field plain">www.taobao.com</div>
-              <div class="pm-actions">
-                <span class="fill">{{
-                  pingCount < pingSamples.length ? 'Ping 中…' : '开始 Ping'
-                }}</span>
-              </div>
-            </div>
-            <div class="pm-card">
-              <div class="pm-grid c3">
-                <PhoneTile
-                  v-for="[label, value] in pingStats"
-                  :key="label"
-                  :label
-                  :value
-                  :w="W.c3"
-                />
-              </div>
-            </div>
-            <div class="pm-card glow">
-              <h4>延迟曲线</h4>
-              <svg class="pm-chart" viewBox="-8 -8 352 146">
-                <path class="grid" d="M0 0H336M0 43H336M0 86H336M0 130H336" />
-                <polyline v-if="phonePoints.length > 1" :points="path(phonePoints)" />
-                <circle
-                  v-for="([x, y], index) in phonePoints"
-                  :key="index"
-                  :cx="x"
-                  :cy="y"
-                  r="4.5"
-                />
-              </svg>
-            </div>
-          </template>
-        </PhoneMock>
-      </FitBox>
-    </div>
-    <div class="story-float" :style="{ '--f': bubble * (speed ? 1 : 0) }" aria-hidden="true">
+  </div>
+
+  <div v-else class="story-layer" :class="{ on }" aria-hidden="true">
+    <div class="story-float" :style="{ '--f': bubble * (speed ? 1 : 0) }">
       <span>↓ {{ down }} <small>Mbps</small></span
       ><span>↑ {{ up }} <small>Mbps</small></span>
     </div>
-    <p class="story-speed" :style="{ '--o': out }" aria-hidden="true">
+    <div class="story-speed" :style="{ '--o': out }">
       <template v-if="speed"><RollNumber :value="String(down)" /><small>Mbps 下载</small></template>
       <template v-else><RollNumber :value="avg.toFixed(1)" /><small>ms 平均延迟</small></template>
-    </p>
+    </div>
   </div>
 </template>

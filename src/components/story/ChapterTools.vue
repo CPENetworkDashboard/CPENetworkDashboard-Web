@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, toRef } from 'vue'
-import FitBox from './FitBox.vue'
-import PhoneMock from './PhoneMock.vue'
 import { ease, pop, span } from './quality'
 
-const props = defineProps<{ t: number; on: boolean; theme: 'light' | 'dark' }>()
+const props = defineProps<{ t: number; on?: boolean; mode: 'screen' | 'stage' }>()
 const t = toRef(props, 't')
 
 // [name, channel position 0..336, half width, peak height, colour]
@@ -35,58 +33,52 @@ const tools = [
   ['短信', '鲲鹏无限、通则短信收件箱'],
 ] as const
 const spots = [
-  [-1, -0.78],
-  [-1.14, 0.06],
-  [-1, 0.86],
-  [1, -0.82],
-  [1.12, 0.02],
-  [1, 0.84],
+  [-0.96, -0.78],
+  [-1.02, 0.04],
+  [-0.96, 0.84],
+  [0.94, -0.8],
+  [0.98, 0.02],
+  [0.94, 0.82],
 ] as const
 const fly = (index: number) => pop(span(t.value, 0.3 + index * 0.06, 0.5 + index * 0.06))
 </script>
 
 <template>
-  <div class="story-layer" :class="{ on }">
-    <div class="story-phone" :style="{ '--t': t }">
-      <FitBox :width="410" fit-height>
-        <PhoneMock :theme page="test" title="Wi-Fi 信道" spill>
-          <div class="pm-seg">
-            <span>2.4 GHz</span><span class="on">5 GHz</span><span>6 GHz</span>
-          </div>
-          <div class="pm-card glow">
-            <h4>信道占用</h4>
-            <svg class="pm-wifi" viewBox="0 0 336 150">
-              <path class="grid" d="M0 132H336M0 92H336M0 52H336M0 12H336" />
-              <path
-                v-for="[name, x, w, h, color] in aps"
-                :key="name"
-                :d="curve(x, w, h)"
-                :style="{ stroke: color, fill: color }"
-              />
-            </svg>
-            <p class="pm-axis">
-              <span>36</span><span>64</span><span>100</span><span>149</span><span>165</span>
-            </p>
-          </div>
-          <div class="pm-card">
-            <h4>周边热点</h4>
-            <div v-for="[name, meta, rssi] in list" :key="name" class="pm-ap">
-              <div>
-                <b>{{ name }}</b
-                ><small>{{ meta }}</small>
-              </div>
-              <strong>{{ rssi }}</strong>
-            </div>
-          </div>
-        </PhoneMock>
-      </FitBox>
+  <template v-if="mode === 'screen'">
+    <div class="pm-seg"><span>2.4 GHz</span><span class="on">5 GHz</span><span>6 GHz</span></div>
+    <div class="pm-card glow">
+      <h4>信道占用</h4>
+      <svg class="pm-wifi" viewBox="0 0 336 150">
+        <path class="grid" d="M0 132H336M0 92H336M0 52H336M0 12H336" />
+        <path
+          v-for="[name, x, w, h, color] in aps"
+          :key="name"
+          :d="curve(x, w, h)"
+          :style="{ stroke: color, fill: color }"
+        />
+      </svg>
+      <p class="pm-axis">
+        <span>36</span><span>64</span><span>100</span><span>149</span><span>165</span>
+      </p>
     </div>
+    <div class="pm-card">
+      <h4>周边热点</h4>
+      <div v-for="[name, meta, rssi] in list" :key="name" class="pm-ap">
+        <div>
+          <b>{{ name }}</b
+          ><small>{{ meta }}</small>
+        </div>
+        <strong>{{ rssi }}</strong>
+      </div>
+    </div>
+  </template>
+
+  <div v-else class="story-layer" :class="{ on }" aria-hidden="true">
     <div
       v-for="([title, text], index) in tools"
       :key="title"
       class="story-tool"
       :style="{ '--bx': spots[index]![0], '--by': spots[index]![1], '--b': fly(index) }"
-      aria-hidden="true"
     >
       <b>{{ title }}</b
       ><span>{{ text }}</span>

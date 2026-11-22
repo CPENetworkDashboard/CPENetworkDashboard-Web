@@ -16,7 +16,7 @@ const props = withDefaults(
   { level: null, fill: 1, mode: 'bar' }
 )
 const quality = computed(() => (props.level ? score[props.level] * props.fill : 0))
-const height = computed(() => (props.level && props.mode === 'bar' ? 64 : 56))
+const height = computed(() => (props.level && props.mode === 'bar' ? 58 : 50))
 </script>
 
 <template>
