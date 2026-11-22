@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import FitBox from './FitBox.vue'
 import PhoneMock from './PhoneMock.vue'
-import StoryChapter from './StoryChapter.vue'
-import { useSiteTheme } from '@/composables/useSiteTheme'
-import { useChapter } from './chapter'
 import { ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number, number] }>()
-const theme = useSiteTheme()
-const { t, reveal } = useChapter(7000, (v, s) => emit('progress', v, s))
+const props = defineProps<{ t: number; on: boolean; theme: 'light' | 'dark' }>()
+const t = toRef(props, 't')
 
 // [name, channel position 0..336, half width, peak height, colour]
 const aps = [
@@ -47,24 +43,10 @@ const spots = [
   [1, 0.84],
 ] as const
 const fly = (index: number) => pop(span(t.value, 0.3 + index * 0.06, 0.5 + index * 0.06))
-const step = computed(() => (t.value < 0.3 ? 0 : t.value < 0.62 ? 1 : 2))
-const steps = [
-  ['Wi-Fi 信道分析', '2.4 / 5 / 6 GHz 周边热点和信道占用一屏看完。'],
-  ['诊断与报告', '载波聚合、邻区扫描、离线诊断报告，排查有据可查。'],
-  ['插件与终端', '签名插件扩展卡片；烽火、通则支持 SSH，鲲鹏无限、通则可收短信。'],
-] as const
 </script>
 
 <template>
-  <StoryChapter
-    id="story-tools"
-    ref="chapter"
-    eyebrow="04 工具"
-    :lines="['不只看信号，', '排查也在手边。']"
-    :steps
-    :step
-    :reveal
-  >
+  <div class="story-layer" :class="{ on }">
     <div class="story-phone" :style="{ '--t': t }">
       <FitBox :width="410" fit-height>
         <PhoneMock :theme page="test" title="Wi-Fi 信道" spill>
@@ -109,5 +91,5 @@ const steps = [
       <b>{{ title }}</b
       ><span>{{ text }}</span>
     </div>
-  </StoryChapter>
+  </div>
 </template>

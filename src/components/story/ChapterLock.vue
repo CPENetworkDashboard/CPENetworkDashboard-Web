@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import SiteIcon from '@/components/SiteIcon.vue'
 import FitBox from './FitBox.vue'
 import PhoneMock from './PhoneMock.vue'
-import StoryChapter from './StoryChapter.vue'
-import { useSiteTheme } from '@/composables/useSiteTheme'
-import { useChapter } from './chapter'
 import { ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number, number] }>()
-const theme = useSiteTheme()
-const { t, reveal } = useChapter(8000, (v, s) => emit('progress', v, s))
+const props = defineProps<{ t: number; on: boolean; theme: 'light' | 'dark' }>()
+const t = toRef(props, 't')
 const deal = computed(() => {
   const open = ease(span(t.value, 0.02, 0.14))
   return open * (1 - ease(span(t.value, 0.16, 0.3)))
@@ -19,7 +15,6 @@ const phase = computed(() => {
   const v = t.value
   return v < 0.34 ? 0 : v < 0.44 ? 1 : v < 0.52 ? 2 : v < 0.7 ? 3 : 4
 })
-const step = computed(() => [0, 0, 1, 1, 2][phase.value]!)
 const bands = [
   ['N1', '2100 MHz'],
   ['N28', '700 MHz'],
@@ -45,23 +40,10 @@ const toast = computed(
     ][phase.value]
 )
 const giant = computed(() => pop(span(t.value, 0.72, 0.9)))
-const steps = [
-  ['选择频段', '按设备能力列出可锁的 NR 与 LTE 频段。'],
-  ['写入并重新注册', '写入配置后设备重新注册，过程实时显示。'],
-  ['回读校验', '读取设备上的实际规则，确认与设置一致。'],
-] as const
 </script>
 
 <template>
-  <StoryChapter
-    id="story-lock"
-    ref="chapter"
-    eyebrow="02 锁频"
-    :lines="['换一个频段，', '结果当场验证。']"
-    :steps
-    :step
-    :reveal
-  >
+  <div class="story-layer" :class="{ on }">
     <p class="story-giant band" :style="{ '--g': giant }" aria-hidden="true">N78</p>
     <div class="story-phone" :style="{ '--t': t }">
       <FitBox :width="410" fit-height>
@@ -107,5 +89,5 @@ const steps = [
         toast.text
       }}
     </p>
-  </StoryChapter>
+  </div>
 </template>

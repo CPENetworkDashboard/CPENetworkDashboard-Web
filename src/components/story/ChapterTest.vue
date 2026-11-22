@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import FitBox from './FitBox.vue'
 import PhoneMock from './PhoneMock.vue'
 import PhoneTile from './PhoneTile.vue'
 import RollNumber from './RollNumber.vue'
-import StoryChapter from './StoryChapter.vue'
-import { useSiteTheme } from '@/composables/useSiteTheme'
-import { useChapter } from './chapter'
 import { W } from './data'
 import { ease, pop, span } from './quality'
 
-const emit = defineEmits<{ progress: [number, number] }>()
-const theme = useSiteTheme()
-const { t, reveal } = useChapter(9000, (v, s) => emit('progress', v, s))
+const props = defineProps<{ t: number; on: boolean; theme: 'light' | 'dark' }>()
+const t = toRef(props, 't')
 
 // Samples jump the way a live multi-thread test does, rather than gliding.
 const downSteps = [0, 96, 284, 461, 618, 742, 836, 893, 921, 932]
@@ -65,24 +61,10 @@ const wide = computed(() => seen.value.map((v, i) => chartPoint(v, i, 1000, 300)
 const path = (list: ReadonlyArray<readonly [number, number]>) =>
   list.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
 const pingOut = computed(() => ease(span(t.value, 0.54, 0.62)))
-const step = computed(() => (t.value < 0.3 ? 0 : t.value < 0.5 ? 1 : 2))
-const steps = [
-  ['多线程测速', '直接在手机上测速，实时、平均与峰值速率都有记录。'],
-  ['悬浮速率窗', '切到别的应用也能看到实时速率，默认关闭，按需开启。'],
-  ['Ping 延迟', '常用站点一键 Ping，丢包与延迟曲线一目了然。'],
-] as const
 </script>
 
 <template>
-  <StoryChapter
-    id="story-test"
-    ref="chapter"
-    eyebrow="03 测试"
-    :lines="['信号还是外网，', '测一下就清楚。']"
-    :steps
-    :step
-    :reveal
-  >
+  <div class="story-layer" :class="{ on }">
     <svg
       class="story-wave"
       viewBox="-20 -20 1040 340"
@@ -168,5 +150,5 @@ const steps = [
       <template v-if="speed"><RollNumber :value="String(down)" /><small>Mbps 下载</small></template>
       <template v-else><RollNumber :value="avg.toFixed(1)" /><small>ms 平均延迟</small></template>
     </p>
-  </StoryChapter>
+  </div>
 </template>
