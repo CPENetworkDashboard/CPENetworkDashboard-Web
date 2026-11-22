@@ -674,8 +674,8 @@
     font-size: 34px;
   }
   .story-hero-copy p {
-    margin: 14px auto 0;
-    font-size: 15px;
+    margin: 12px auto 0;
+    font-size: 14px;
     line-height: 1.75;
   }
   .story-actions {
@@ -697,10 +697,15 @@
     padding: 9px 11px;
     border-radius: 14px;
     transform: translate(-50%, -50%)
-      translate(calc(var(--bx) * var(--b) * 116px), calc(var(--by) * var(--b) * 24vh))
+      translate(calc(var(--bx) * var(--b) * 124px), calc(var(--by) * var(--b) * 26vh))
       scale(calc(0.3 + var(--b) * 0.7));
   }
   .story-tool span {
+    display: none;
+  }
+  /* Four corner chips on phones; the two middle ones crowd the screen edges. */
+  .story-tool:nth-of-type(3),
+  .story-tool:nth-of-type(6) {
     display: none;
   }
   .story-tool b {
