@@ -4,11 +4,13 @@ import FitBox from './FitBox.vue'
 import PhoneConnect from './PhoneConnect.vue'
 import PhoneMock from './PhoneMock.vue'
 import StoryChapter from './StoryChapter.vue'
+import { useSiteTheme } from '@/composables/useSiteTheme'
 import { useChapter } from './chapter'
 import { powerAt, radioAt } from './data'
 import { ease, pop, span } from './quality'
 
 const emit = defineEmits<{ progress: [number, number] }>()
+const theme = useSiteTheme()
 const { t, reveal } = useChapter(7000, (v, s) => emit('progress', v, s))
 const fill = computed(() => ease(span(t.value, 0.06, 0.46)))
 const radio = computed(() => radioAt(fill.value))
@@ -35,7 +37,7 @@ const steps = [
   >
     <div class="story-phone" :style="{ '--t': t }">
       <FitBox :width="410" fit-height>
-        <PhoneMock page="connect" spill>
+        <PhoneMock :theme page="connect" spill>
           <PhoneConnect
             :radio
             :power

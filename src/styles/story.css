@@ -1,8 +1,10 @@
 .story {
-  --st-bg: #05080d;
-  --st-text: #eef3fa;
-  --st-muted: #8d9aad;
-  --st-accent: #9cc8ff;
+  --st-bg: var(--soft);
+  --st-text: var(--ink);
+  --st-muted: var(--muted);
+  --st-accent: var(--accent);
+  --st-line: var(--line);
+  --st-card: var(--paper);
   --mx: 1;
   --my: 1;
   position: relative;
@@ -35,7 +37,12 @@
   height: 230vh;
 }
 .story-scene.hero {
+  --st-bg: #0c0f0d;
+  --st-text: #f4f2ea;
+  --st-muted: #a2aaa0;
+  --st-line: rgba(244, 242, 234, 0.16);
   height: 190vh;
+  color: var(--st-text);
 }
 .story-sticky {
   position: sticky;
@@ -48,7 +55,21 @@
 /* Hero */
 .story-scene.hero .story-sticky {
   background:
-    radial-gradient(40% 50% at 72% 58%, rgba(36, 98, 172, 0.34), transparent 70%), var(--st-bg);
+    radial-gradient(42% 56% at 74% 54%, rgba(244, 242, 234, 0.07), transparent 72%), var(--st-bg);
+}
+.story-scene.hero .story-sticky::before {
+  content: '';
+  position: absolute;
+  left: 74%;
+  top: 54%;
+  width: min(820px, 64vw);
+  aspect-ratio: 1;
+  border: 1px solid rgba(244, 242, 234, 0.12);
+  border-radius: 50%;
+  box-shadow:
+    0 0 80px rgba(139, 199, 172, 0.1),
+    inset 0 0 80px rgba(139, 199, 172, 0.06);
+  transform: translate(-50%, -50%) scale(calc(1 + var(--e) * 0.08));
 }
 .story-hero-copy {
   position: absolute;
@@ -178,7 +199,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   padding: 96px 0 60px;
-  background: radial-gradient(46% 50% at 50% 62%, rgba(36, 98, 172, 0.2), transparent 72%);
+  background: var(--st-bg);
 }
 .story-head {
   position: relative;
@@ -199,11 +220,9 @@
   font-size: clamp(32px, 3.4vw, 52px);
   line-height: 1.18;
 }
-.story-reveal {
-  display: block;
-  clip-path: inset(-0.2em -0.1em calc((1 - var(--r)) * 110%) -0.1em);
-  opacity: calc(0.15 + var(--r) * 0.85);
-  transform: translateY(calc((1 - var(--r)) * 0.35em));
+.story-reveal i {
+  font-style: normal;
+  opacity: calc(0.14 + var(--c) * 0.86);
 }
 .story-steps {
   display: flex;
@@ -218,7 +237,7 @@
   gap: 6px;
   max-width: 260px;
   padding-top: 10px;
-  border-top: 2px solid rgba(255, 255, 255, 0.12);
+  border-top: 2px solid var(--st-line);
   opacity: 0.38;
   transition:
     opacity 0.4s,
@@ -256,15 +275,10 @@
 .story-tool,
 .story-float,
 .story-toast {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02)),
-    rgba(18, 24, 34, 0.62);
-  backdrop-filter: blur(16px) saturate(1.6);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 24px 50px -22px rgba(0, 0, 0, 0.85);
+  border: 1px solid var(--st-line);
+  background: var(--st-card);
+  color: var(--st-text);
+  box-shadow: 0 24px 48px -26px rgba(24, 32, 26, 0.32);
 }
 .story-tool {
   --b: 0;
@@ -307,7 +321,6 @@
   margin: 0;
   padding: 12px 18px;
   border-radius: 999px;
-  color: var(--st-accent);
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
@@ -315,8 +328,7 @@
   animation: story-burst 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) both;
 }
 .story-toast.ok {
-  border-color: rgba(122, 224, 161, 0.45);
-  color: #7ae0a1;
+  color: #248a3d;
 }
 @keyframes story-burst {
   from {
@@ -335,7 +347,11 @@
 }
 .story-giant.band {
   --g: 0;
-  background: linear-gradient(180deg, rgba(156, 200, 255, 0.7), rgba(156, 200, 255, 0.04) 85%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--st-text) 20%, transparent),
+    transparent 88%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -357,12 +373,12 @@
   display: grid;
   justify-items: start;
   margin: 0;
-  color: #eef6ff;
+  color: var(--st-text);
   font-size: clamp(88px, 9vw, 150px);
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1;
-  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.9));
+  filter: drop-shadow(0 6px 22px color-mix(in srgb, var(--st-bg) 92%, transparent));
   opacity: var(--o);
   transform: translateX(-50%)
     translate(calc((1 - var(--o)) * 180px * var(--mx)), calc((1 - var(--o)) * -120px))
@@ -415,10 +431,10 @@
     scale(calc(0.4 + var(--f) * 0.6));
 }
 .story-float span:first-child {
-  color: #63a4ff;
+  color: #2563eb;
 }
 .story-float span:last-child {
-  color: #45c98b;
+  color: #168a68;
 }
 .story-float small {
   color: var(--st-muted);
@@ -437,13 +453,13 @@
 }
 .story-wave polyline {
   fill: none;
-  stroke: rgba(156, 200, 255, 0.45);
+  stroke: color-mix(in srgb, var(--st-accent) 45%, transparent);
   stroke-width: 3;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 .story-wave circle {
-  fill: #f5b041;
+  fill: var(--st-accent);
   animation: story-dot 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   transform-box: fill-box;
   transform-origin: center;
@@ -572,7 +588,7 @@
   height: 30px;
   overflow: hidden;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--st-line);
 }
 .story-rail i::after {
   content: '';
@@ -605,7 +621,7 @@
     max-width: 380px;
     padding: 14px 0 14px 20px;
     border-top: 0;
-    border-left: 2px solid rgba(255, 255, 255, 0.12);
+    border-left: 2px solid var(--st-line);
   }
   .story-steps li.on {
     border-left-color: var(--st-accent);
@@ -652,9 +668,9 @@
     grid-auto-flow: column;
     gap: 10px;
     padding: 4px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--st-line);
     border-radius: 999px;
-    background: rgba(10, 16, 26, 0.82);
+    background: color-mix(in srgb, var(--st-card) 88%, transparent);
     backdrop-filter: blur(10px);
     transform: translateX(-50%) translateY(8px);
   }
@@ -712,7 +728,7 @@
     background:
       radial-gradient(
         70% 40% at 50% calc(90% - var(--rise) * 35%),
-        rgba(36, 98, 172, 0.36),
+        rgba(244, 242, 234, 0.08),
         transparent 70%
       ),
       var(--st-bg);
@@ -720,15 +736,20 @@
   .story-caption {
     display: none;
   }
+  .story-scene.hero .story-sticky::before {
+    left: 50%;
+    top: calc(100% - var(--rise) * 42%);
+    width: 150vw;
+  }
   .story-sticky.stage {
     padding-top: 84px;
   }
   .story-tool {
-    width: 124px;
-    padding: 10px 12px;
+    width: 112px;
+    padding: 9px 11px;
     border-radius: 14px;
     transform: translate(-50%, -50%)
-      translate(calc(var(--bx) * var(--b) * 132px), calc(var(--by) * var(--b) * 24vh))
+      translate(calc(var(--bx) * var(--b) * 116px), calc(var(--by) * var(--b) * 24vh))
       scale(calc(0.3 + var(--b) * 0.7));
   }
   .story-tool span {

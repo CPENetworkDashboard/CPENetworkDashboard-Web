@@ -6,12 +6,14 @@ import MetricTile from './MetricTile.vue'
 import PhoneConnect from './PhoneConnect.vue'
 import PhoneMock from './PhoneMock.vue'
 import StoryChapter from './StoryChapter.vue'
+import { useSiteTheme } from '@/composables/useSiteTheme'
 import { useChapter } from './chapter'
 import { finalPower, finalRadio } from './data'
 import { ease, span } from './quality'
 
 defineProps<{ versions: Array<{ name: string; version?: string }> }>()
 const emit = defineEmits<{ progress: [number, number] }>()
+const theme = useSiteTheme()
 const { t, reveal } = useChapter(6500, (v, s) => emit('progress', v, s))
 const slide = computed(() => ease(span(t.value, 0.04, 0.4)))
 const wipe = computed(() => ease(span(t.value, 0.56, 0.9)))
@@ -43,7 +45,7 @@ const steps = [
     </template>
     <div class="story-desktop" :style="{ '--s': slide }">
       <FitBox :width="1040">
-        <AppMock page="connect" :theme="wipe > 0.5 ? 'light' : 'dark'">
+        <AppMock page="connect" :theme="wipe > 0.5 ? (theme === 'dark' ? 'light' : 'dark') : theme">
           <section class="am-pane">
             <header class="am-pane-head">
               <h4>射频质量</h4>
@@ -81,7 +83,7 @@ const steps = [
     </div>
     <div class="story-front" :style="{ '--s': slide }">
       <FitBox :width="410" fit-height>
-        <PhoneMock page="connect" :wipe>
+        <PhoneMock :theme page="connect" :wipe>
           <PhoneConnect :radio="finalRadio" :power="finalPower" />
         </PhoneMock>
       </FitBox>

@@ -5,11 +5,13 @@ import PhoneMock from './PhoneMock.vue'
 import PhoneTile from './PhoneTile.vue'
 import RollNumber from './RollNumber.vue'
 import StoryChapter from './StoryChapter.vue'
+import { useSiteTheme } from '@/composables/useSiteTheme'
 import { useChapter } from './chapter'
 import { W } from './data'
 import { ease, pop, span } from './quality'
 
 const emit = defineEmits<{ progress: [number, number] }>()
+const theme = useSiteTheme()
 const { t, reveal } = useChapter(9000, (v, s) => emit('progress', v, s))
 
 // Samples jump the way a live multi-thread test does, rather than gliding.
@@ -93,7 +95,7 @@ const steps = [
     </svg>
     <div class="story-phone" :style="{ '--t': t }">
       <FitBox :width="410" fit-height>
-        <PhoneMock page="test" :title="speed ? '测速' : 'Ping'" spill>
+        <PhoneMock :theme page="test" :title="speed ? '测速' : 'Ping'" spill>
           <template v-if="speed">
             <div class="pm-card glow">
               <h4>速率监控</h4>

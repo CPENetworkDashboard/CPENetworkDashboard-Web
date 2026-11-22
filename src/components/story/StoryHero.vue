@@ -47,7 +47,7 @@ const rise = computed(() => ease(span(scroll.value, 0, 0.32)))
       </div>
       <div class="story-hero-phone">
         <FitBox :width="410" fit-height>
-          <PhoneMock page="connect" :explode="explode">
+          <PhoneMock page="connect" theme="dark" :explode="explode">
             <PhoneConnect :radio="finalRadio" :power="finalPower" layered />
           </PhoneMock>
         </FitBox>

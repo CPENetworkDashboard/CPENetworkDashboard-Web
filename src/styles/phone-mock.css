@@ -42,8 +42,9 @@
   --q-fair: #ffcb6b;
   --q-poor: #ffa057;
   --q-bad: #ff8a80;
-  --glass: rgba(46, 48, 54, 0.38);
-  --glass-edge: rgba(255, 255, 255, 0.22);
+  --glass: rgba(255, 255, 255, 0.07);
+  --glass-edge: rgba(255, 255, 255, 0.38);
+  --lens: rgba(255, 255, 255, 0.1);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -78,8 +79,9 @@
   --q-fair: #8a5a00;
   --q-poor: #c2410c;
   --q-bad: #b42318;
-  --glass: rgba(255, 255, 255, 0.42);
-  --glass-edge: rgba(255, 255, 255, 0.85);
+  --glass: rgba(255, 255, 255, 0.3);
+  --glass-edge: rgba(255, 255, 255, 0.95);
+  --lens: rgba(255, 255, 255, 0.5);
 }
 .pm-screen.wiped {
   position: absolute;
@@ -92,18 +94,17 @@
   inset: 0;
   border-radius: inherit;
   background:
-    radial-gradient(60% 40% at 18% 22%, #3d6fd8, transparent 70%),
-    radial-gradient(55% 38% at 88% 48%, #b2479c, transparent 70%),
-    radial-gradient(60% 42% at 30% 86%, #1fa58c, transparent 70%),
-    linear-gradient(160deg, #1a2140, #241332);
+    radial-gradient(70% 45% at 80% 12%, rgba(255, 236, 205, 0.9), transparent 70%),
+    radial-gradient(80% 50% at 10% 70%, rgba(120, 168, 150, 0.85), transparent 72%),
+    linear-gradient(180deg, #8fb3cf 0%, #c9d6d3 46%, #d9c6a8 100%);
   opacity: var(--w, 0);
 }
 .pm-screen.wall .pm-card {
-  background: rgba(34, 35, 39, calc(1 - var(--w, 0) * 0.55));
+  background: color-mix(in srgb, var(--p-card) calc(100% - var(--w, 0) * 42%), transparent);
   backdrop-filter: blur(calc(var(--w, 0) * 16px)) saturate(calc(1 + var(--w, 0) * 0.5));
 }
 .pm-screen.wall .pt {
-  background: rgba(43, 44, 48, calc(0.96 - var(--w, 0) * 0.5));
+  background: color-mix(in srgb, var(--p-tile) calc(100% - var(--w, 0) * 40%), transparent);
 }
 .pm-layer {
   position: relative;
@@ -484,16 +485,15 @@
   padding: 4px;
   border-radius: 32px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02) 55%),
-    var(--glass, rgba(46, 48, 54, 0.38));
-  backdrop-filter: blur(10px) saturate(2) brightness(1.08);
-  -webkit-backdrop-filter: blur(10px) saturate(2) brightness(1.08);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 60%),
+    var(--glass, rgba(255, 255, 255, 0.3));
+  backdrop-filter: blur(14px) saturate(2.2) brightness(1.06);
+  -webkit-backdrop-filter: blur(14px) saturate(2.2) brightness(1.06);
   box-shadow:
-    inset 0 1px 0.5px var(--glass-edge, rgba(255, 255, 255, 0.22)),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
-    inset 0 0 18px rgba(255, 255, 255, 0.06),
-    0 18px 40px -14px rgba(0, 0, 0, 0.7);
+    inset 0 1px 0.5px var(--glass-edge, rgba(255, 255, 255, 0.95)),
+    inset 0 -0.5px 0.5px rgba(255, 255, 255, 0.3),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
+    0 12px 30px -12px rgba(0, 0, 0, 0.32);
 }
 .pm-dock {
   position: absolute;
@@ -540,17 +540,16 @@
   height: 56px;
   border-radius: 28px;
   background:
-    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.34), transparent 60%),
-    radial-gradient(90% 70% at 50% 110%, rgba(156, 200, 255, 0.28), transparent 70%),
-    rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(2px) brightness(1.25) saturate(1.8) contrast(1.05);
-  -webkit-backdrop-filter: blur(2px) brightness(1.25) saturate(1.8) contrast(1.05);
+    radial-gradient(100% 70% at 50% 0%, rgba(255, 255, 255, 0.45), transparent 62%),
+    var(--lens, rgba(255, 255, 255, 0.5));
+  backdrop-filter: blur(1px) saturate(1.8) brightness(1.12);
+  -webkit-backdrop-filter: blur(1px) saturate(1.8) brightness(1.12);
   box-shadow:
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.7),
-    inset 0 -1.5px 2px rgba(255, 255, 255, 0.18),
-    inset 1px 0 1px rgba(255, 255, 255, 0.2),
-    inset -1px 0 1px rgba(255, 255, 255, 0.2),
-    0 8px 18px -8px rgba(0, 0, 0, 0.6);
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    inset 0 -1px 1.5px rgba(255, 255, 255, 0.35),
+    inset 1.5px 0 1px rgba(255, 255, 255, 0.25),
+    inset -1.5px 0 1px rgba(255, 255, 255, 0.25),
+    0 6px 14px -6px rgba(0, 0, 0, 0.28);
   transform: translateX(calc(var(--i) * 76px)) scale(var(--ls), calc(2 - var(--ls)));
   transition: transform 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
 }
@@ -804,4 +803,23 @@
   color: var(--q-excellent);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+}
+.pm-screen.light .pm-dock,
+.pm-screen.light ~ .story-dock {
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 14px 32px -14px rgba(20, 30, 24, 0.35);
+}
+.pm-screen.light .pm-lens {
+  --lens: rgba(22, 104, 217, 0.09);
+}
+:root:not([data-theme='dark']) .story-dock {
+  --glass: rgba(255, 255, 255, 0.45);
+  --lens: rgba(22, 104, 217, 0.09);
+  color: #16181c;
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 18px 40px -16px rgba(20, 30, 24, 0.35);
 }

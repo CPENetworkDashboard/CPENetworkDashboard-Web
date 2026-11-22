@@ -3,10 +3,12 @@ import { computed } from 'vue'
 import FitBox from './FitBox.vue'
 import PhoneMock from './PhoneMock.vue'
 import StoryChapter from './StoryChapter.vue'
+import { useSiteTheme } from '@/composables/useSiteTheme'
 import { useChapter } from './chapter'
 import { ease, pop, span } from './quality'
 
 const emit = defineEmits<{ progress: [number, number] }>()
+const theme = useSiteTheme()
 const { t, reveal } = useChapter(7000, (v, s) => emit('progress', v, s))
 
 // [name, channel position 0..336, half width, peak height, colour]
@@ -65,7 +67,7 @@ const steps = [
   >
     <div class="story-phone" :style="{ '--t': t }">
       <FitBox :width="410" fit-height>
-        <PhoneMock page="test" title="Wi-Fi 信道" spill>
+        <PhoneMock :theme page="test" title="Wi-Fi 信道" spill>
           <div class="pm-seg">
             <span>2.4 GHz</span><span class="on">5 GHz</span><span>6 GHz</span>
           </div>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   id: string
   eyebrow: string
   lines: string[]
@@ -8,6 +10,10 @@ defineProps<{
   reveal: number
   tall?: boolean
 }>()
+const offsets = computed(() =>
+  props.lines.map((_, row) => props.lines.slice(0, row).join('').length)
+)
+const total = computed(() => props.lines.join('').length)
 </script>
 
 <template>
@@ -15,11 +21,16 @@ defineProps<{
     <div class="story-sticky stage">
       <header class="story-head">
         <p class="story-eyebrow">{{ eyebrow }}</p>
-        <h2 :id="`${id}-title`">
-          <span class="story-reveal" :style="{ '--r': reveal }"
-            ><template v-for="(line, index) in lines" :key="line"
-              ><br v-if="index" />{{ line }}</template
-            ></span
+        <h2 :id="`${id}-title`" class="story-reveal">
+          <template v-for="(line, row) in lines" :key="line"
+            ><br v-if="row" /><i
+              v-for="(char, index) in line"
+              :key="index"
+              :style="{
+                '--c': Math.min(1, Math.max(0, reveal * total * 1.25 - offsets[row]! - index)),
+              }"
+              >{{ char }}</i
+            ></template
           >
         </h2>
         <ol class="story-steps">

@@ -4,11 +4,13 @@ import FitBox from './FitBox.vue'
 import PhoneConnect from './PhoneConnect.vue'
 import PhoneMock from './PhoneMock.vue'
 import StoryChapter from './StoryChapter.vue'
+import { useSiteTheme } from '@/composables/useSiteTheme'
 import { useChapter } from './chapter'
 import { finalPower, finalRadio } from './data'
 import { clamp, ease, pop, span } from './quality'
 
 const emit = defineEmits<{ progress: [number, number] }>()
+const theme = useSiteTheme()
 const { t, reveal } = useChapter(8500, (v, s) => emit('progress', v, s))
 
 const zoom = computed(() => pop(span(t.value, 0.02, 0.14)) * (1 - ease(span(t.value, 0.4, 0.48))))
@@ -46,7 +48,7 @@ const labels = ['连接', '锁频', '测试', '设置']
   >
     <div class="story-phone" :style="{ '--t': t, '--w': wall }">
       <FitBox :width="410" fit-height>
-        <PhoneMock page="connect" wallpaper :lens :lens-scale="stretch">
+        <PhoneMock :theme page="connect" wallpaper :lens :lens-scale="stretch">
           <PhoneConnect
             :radio="finalRadio"
             :power="finalPower"

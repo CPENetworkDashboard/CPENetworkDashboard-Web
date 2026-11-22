@@ -43,6 +43,7 @@ const dock: Array<[Page, string]> = [
   ['test', '测试'],
   ['settings', '设置'],
 ]
+const overlay = computed(() => (props.theme === 'dark' ? 'light' : 'dark'))
 const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === props.page))
 </script>
 
@@ -54,15 +55,15 @@ const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === prop
     aria-hidden="true"
   >
     <div
-      v-for="layer in wipe > 0 ? ['dark', 'light'] : [theme]"
+      v-for="layer in wipe > 0 ? [theme, overlay] : [theme]"
       :key="layer"
       class="pm-screen"
       :class="[
         layer,
-        { clip: explode === 0 && !spill, wiped: layer === 'light' && wipe > 0, wall: wallpaper },
+        { clip: explode === 0 && !spill, wiped: layer === overlay && wipe > 0, wall: wallpaper },
       ]"
       :style="
-        layer === 'light' && wipe > 0
+        layer === overlay && wipe > 0
           ? { clipPath: `inset(${(1 - wipe) * 100}% 0 0 0 round 46px)` }
           : undefined
       "
@@ -82,7 +83,7 @@ const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === prop
         }}</span>
       </nav>
       <div class="pm-body"><slot /></div>
-      <div class="pm-dock pm-layer" style="--z: 7">
+      <div class="pm-dock pm-layer" style="--z: 5">
         <span class="am-tag pm-tag">液态玻璃底栏</span>
         <i class="pm-lens" :style="{ '--i': lensAt, '--ls': lensScale }"></i>
         <span

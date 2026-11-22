@@ -4,10 +4,12 @@ import SiteIcon from '@/components/SiteIcon.vue'
 import FitBox from './FitBox.vue'
 import PhoneMock from './PhoneMock.vue'
 import StoryChapter from './StoryChapter.vue'
+import { useSiteTheme } from '@/composables/useSiteTheme'
 import { useChapter } from './chapter'
 import { ease, pop, span } from './quality'
 
 const emit = defineEmits<{ progress: [number, number] }>()
+const theme = useSiteTheme()
 const { t, reveal } = useChapter(8000, (v, s) => emit('progress', v, s))
 const deal = computed(() => {
   const open = ease(span(t.value, 0.02, 0.14))
@@ -63,7 +65,13 @@ const steps = [
     <p class="story-giant band" :style="{ '--g': giant }" aria-hidden="true">N78</p>
     <div class="story-phone" :style="{ '--t': t }">
       <FitBox :width="410" fit-height>
-        <PhoneMock page="lock" :tabs="['网络首选', '锁频段', '锁ARFCN', '锁PCI']" :tab="1" spill>
+        <PhoneMock
+          :theme
+          page="lock"
+          :tabs="['网络首选', '锁频段', '锁ARFCN', '锁PCI']"
+          :tab="1"
+          spill
+        >
           <div class="pm-card" :class="{ glow: phase >= 3 }">
             <h4>当前状态</h4>
             <p class="pm-lines">
