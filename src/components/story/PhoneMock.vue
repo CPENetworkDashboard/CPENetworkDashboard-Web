@@ -1,6 +1,8 @@
 <script setup lang="ts">
-type Page = 'connect' | 'lock' | 'test'
-withDefaults(
+import { computed } from 'vue'
+
+type Page = 'connect' | 'lock' | 'test' | 'settings'
+const props = withDefaults(
   defineProps<{
     page: Page
     explode?: number
@@ -8,23 +10,47 @@ withDefaults(
     wipe?: number
     tabs?: string[]
     tab?: number
-    clip?: boolean
+    title?: string
+    wallpaper?: boolean
+    /** Let popped-out content cross the screen edge. */
+    spill?: boolean
+    /** Position of the glass lens over the dock, defaults to the current page. */
+    lens?: number
+    lensScale?: number
   }>(),
-  { explode: 0, theme: 'dark', wipe: 0, tabs: () => [], tab: 0, clip: true }
+  {
+    explode: 0,
+    theme: 'dark',
+    wipe: 0,
+    tabs: () => [],
+    tab: 0,
+    title: '',
+    wallpaper: false,
+    spill: false,
+    lens: undefined,
+    lensScale: 1,
+  }
 )
 const icons: Record<string, string> = {
-  connect: '<path d="m8 8-4 4 4 4m8-8 4 4-4 4"/><path d="M10 12h.01M12 12h.01M14 12h.01"/>',
-  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/>',
-  test: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 18 4-5"/>',
-  settings:
-    '<circle cx="12" cy="12" r="3"/><path d="m9 3-.6 2.4-2.3 1-2.2-.9-2 3.4 1.8 1.6v3l-1.8 1.6 2 3.4 2.2-.9 2.3 1L9 21h6l.6-2.4 2.3-1 2.2.9 2-3.4-1.8-1.6v-3l1.8-1.6-2-3.4-2.2.9-2.3-1L15 3Z"/>',
+  connect: '<path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"/>',
+  test: '<circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V10M10 3h4"/>',
+  settings: '<path d="M12 3.2 19.6 7.6v8.8L12 20.8 4.4 16.4V7.6z"/><circle cx="12" cy="12" r="3"/>',
 }
-const dock: Array<[string, string]> = [
+const dock: Array<[Page, string]> = [
   ['connect', '连接'],
   ['lock', '锁频'],
   ['test', '测试'],
   ['settings', '设置'],
 ]
+const overlay = computed(() => (props.theme === 'dark' ? 'light' : 'dark'))
+const wiping = computed(() => (props.wipe ?? 0) > 0 && (props.wipe ?? 0) < 1)
+const layers = computed(() =>
+  wiping.value
+    ? [props.theme, overlay.value]
+    : [(props.wipe ?? 0) >= 1 ? overlay.value : props.theme]
+)
+const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === props.page))
 </script>
 
 <template>
@@ -35,30 +61,44 @@ const dock: Array<[string, string]> = [
     aria-hidden="true"
   >
     <div
-      v-for="layer in wipe > 0 ? ['dark', 'light'] : [theme]"
+      v-for="layer in layers"
       :key="layer"
       class="pm-screen"
-      :class="[layer, { clip: clip && explode === 0, wiped: layer === 'light' && wipe > 0 }]"
+      :class="[
+        layer,
+        { clip: explode === 0 && !spill, wiped: layer === overlay && wiping, wall: wallpaper },
+      ]"
       :style="
-        layer === 'light' && wipe > 0
-          ? { clipPath: `inset(${(1 - wipe) * 100}% 0 0 0 round 44px)` }
+        layer === overlay && wiping
+          ? { clipPath: `inset(${(1 - wipe) * 100}% 0 0 0 round 46px)` }
           : undefined
       "
     >
       <div class="pm-status pm-layer" style="--z: 1">
-        <b>17:27</b><i class="pm-camera"></i>
-        <span class="pm-icons"><i class="sig"></i><i class="wifi"></i><i class="bat"></i></span>
+        <b>18:00</b><i class="pm-camera"></i>
+        <span class="pm-icons"
+          ><small>5G</small><i class="sig"></i><i class="wifi"></i><i class="bat">96</i></span
+        >
       </div>
+      <header v-if="title" class="pm-title pm-layer" style="--z: 2">
+        <i></i><b>{{ title }}</b>
+      </header>
       <nav v-if="tabs.length" class="pm-tabs pm-layer" style="--z: 2">
         <span v-for="(name, index) in tabs" :key="name" :class="{ on: index === tab }">{{
           name
         }}</span>
       </nav>
       <div class="pm-body"><slot /></div>
-      <div class="pm-dock pm-layer" style="--z: 7">
-        <span class="am-tag pm-tag">底部导航</span>
-        <span v-for="[icon, label] in dock" :key="icon" :class="{ on: icon === page }">
-          <svg viewBox="0 0 24 24" v-html="icons[icon]"></svg>{{ label }}
+      <div class="pm-dock pm-layer" style="--z: 5">
+        <span class="am-tag pm-tag">液态玻璃底栏</span>
+        <i class="pm-lens" :style="{ '--i': lensAt, '--ls': lensScale }"></i>
+        <span
+          v-for="([id, label], index) in dock"
+          :key="id"
+          class="pm-tab"
+          :class="{ on: index === Math.round(lensAt) }"
+        >
+          <svg viewBox="0 0 24 24" v-html="icons[id]"></svg>{{ label }}
         </span>
       </div>
     </div>

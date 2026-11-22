@@ -132,8 +132,8 @@ export async function fetchPublicSummary(): Promise<AnalyticsSummary> {
     })
   } catch {
     const [visitsResult, downloadsResult] = await Promise.allSettled([
-      fetch(apiUrl('/counter?skip=1'), { headers: { Accept: 'application/json' } }).then((response) =>
-        readJson<{ total?: number; today?: number }>(response)
+      fetch(apiUrl('/counter?skip=1'), { headers: { Accept: 'application/json' } }).then(
+        (response) => readJson<{ total?: number; today?: number }>(response)
       ),
       fetch(apiUrl('/downloads'), { headers: { Accept: 'application/json' } }).then((response) =>
         readJson<Partial<AnalyticsSummary>>(response)
