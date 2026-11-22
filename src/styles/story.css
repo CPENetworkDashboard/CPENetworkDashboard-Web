@@ -15,12 +15,16 @@
   --mx: 0.36;
   --my: 0.78;
 }
-.story.narrow .pm {
-  transform: rotateX(calc(var(--e) * 46deg)) rotateZ(calc(var(--e) * -24deg))
-    scale(calc(1 - var(--e) * 0.36));
+.story.narrow .pm.exploding {
+  transform: perspective(2400px) rotateX(calc(var(--e) * 50deg)) rotateZ(calc(var(--e) * -28deg))
+    scale(calc(1 - var(--e) * 0.08));
 }
 .story.narrow .pm-layer {
-  transform: translateZ(calc(var(--e) * var(--z) * 26px));
+  transform: translateZ(calc(clamp(0, var(--e) * 1.5 - var(--z) * 0.1, 1) * var(--z) * 48px));
+}
+.story.narrow .pm-tag {
+  top: -58px;
+  font-size: 28px;
 }
 .story h1,
 .story h2 {
@@ -657,6 +661,11 @@
   }
 }
 @media (max-width: 760px) {
+  /* Only the active heading takes room, so short chapters leave more height for the phone. */
+  .story-heads > .story-head:not(.on) {
+    position: absolute;
+    inset: 0 0 auto;
+  }
   .story-hero-copy {
     text-align: center;
   }
@@ -754,9 +763,6 @@
 }
 
 /* One pinned stage carries the whole story; scenes cross-fade inside it. */
-html.story-snap {
-  scroll-snap-type: y proximity;
-}
 .story-track {
   position: relative;
 }
@@ -768,7 +774,6 @@ html.story-snap {
 .story-anchor {
   height: 100vh;
   height: 100svh;
-  scroll-snap-align: start;
 }
 .story-sticky.stage {
   color: var(--st-text);

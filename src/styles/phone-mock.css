@@ -106,18 +106,30 @@
 }
 .pm-layer {
   position: relative;
-  transform: translateZ(calc(var(--e) * var(--z) * 38px));
+  /* Higher layers lift later, so the stack fans out instead of moving as one block. */
+  transform: translateZ(calc(clamp(0, var(--e) * 1.5 - var(--z) * 0.1, 1) * var(--z) * 64px));
+}
+.pm.exploding {
+  transform: perspective(2400px) rotateX(calc(var(--e) * 54deg)) rotateZ(calc(var(--e) * -32deg))
+    scale(calc(1 - var(--e) * 0.16));
 }
 .pm.exploding .pm-card.pm-layer,
 .pm.exploding .pm-dock {
   box-shadow:
-    0 0 0 1px rgba(156, 200, 255, calc(var(--e) * 0.35)),
-    0 calc(var(--e) * 40px) 50px -16px rgba(0, 0, 0, 0.75);
+    0 0 0 1px rgba(255, 255, 255, calc(var(--e) * 0.18)),
+    0 calc(var(--e) * 40px) 50px -16px rgba(0, 0, 0, 0.7);
 }
 .pm-tag {
   left: 8px;
-  top: -36px;
-  font-size: 16px;
+  top: -46px;
+  z-index: 2;
+  padding: 7px 16px;
+  border: 0;
+  background: rgba(250, 249, 245, 0.94);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+  color: #17191c;
+  font-size: 20px;
+  opacity: clamp(0, calc((var(--e) - 0.55) * 3), 1);
 }
 .pm-status {
   display: flex;

@@ -118,7 +118,17 @@ let start = 0
 let reduce = false
 const tick = (now: number) => {
   t.value = Math.min(1, (now - start) / scenes[active.value]!.duration)
-  frame = t.value < 1 ? requestAnimationFrame(tick) : 0
+  // The hero keeps breathing apart and back together while it is on screen.
+  if (t.value >= 1 && active.value === 0) {
+    start = now + 600
+    t.value = 0
+  }
+  frame = t.value < 1 || active.value === 0 ? requestAnimationFrame(tick) : 0
+}
+function finish() {
+  if (frame) cancelAnimationFrame(frame)
+  frame = 0
+  t.value = 1
 }
 function play(delay = 0) {
   if (frame) cancelAnimationFrame(frame)
@@ -131,7 +141,8 @@ function play(delay = 0) {
   start = performance.now() + delay
   frame = requestAnimationFrame(tick)
 }
-watch(active, () => play(250))
+// Scrolling back shows the finished scene instead of blanking it and replaying.
+watch(active, (now, before) => (now < before && now > 0 ? finish() : play(80)))
 const tFor = (index: number) =>
   index === active.value ? Math.max(0, t.value) : index < active.value ? 1 : 0
 const step = (chapter: Chapter, index: number) =>
@@ -177,7 +188,6 @@ onMounted(() => {
   query = window.matchMedia('(max-width: 760px)')
   onQuery()
   query.addEventListener('change', onQuery)
-  document.documentElement.classList.add('story-snap')
   measure()
   play(700)
   window.addEventListener('scroll', onScroll, { passive: true })
@@ -185,7 +195,6 @@ onMounted(() => {
 })
 onUnmounted(() => {
   query?.removeEventListener('change', onQuery)
-  document.documentElement.classList.remove('story-snap')
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onScroll)
   if (frame) cancelAnimationFrame(frame)
