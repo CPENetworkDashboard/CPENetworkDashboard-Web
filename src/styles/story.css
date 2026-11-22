@@ -207,6 +207,7 @@
   color: var(--st-muted);
   font-size: 15px;
   line-height: 1.7;
+  text-wrap: balance;
 }
 .story-stagebox {
   position: relative;
@@ -596,7 +597,17 @@
   }
   .story-steps li {
     max-width: none;
-    padding-top: 8px;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .story-steps li.on::before {
+    content: '';
+    justify-self: center;
+    width: 28px;
+    height: 2px;
+    margin-bottom: 4px;
+    border-radius: 2px;
+    background: var(--st-accent);
   }
   .story-steps li:not(.on) {
     display: none;
@@ -694,9 +705,10 @@
   }
   .story-speed {
     left: 50%;
-    bottom: 18%;
+    bottom: 16%;
     justify-items: center;
-    font-size: 23vw;
+    font-size: 19vw;
+    filter: drop-shadow(0 0 14px var(--st-bg)) drop-shadow(0 0 4px var(--st-bg));
   }
   .story-speed small {
     font-size: 12px;

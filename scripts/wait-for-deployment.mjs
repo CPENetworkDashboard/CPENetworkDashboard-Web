@@ -5,7 +5,7 @@ const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"\s]+)"/g)].map((ma
 const source = await readFile('edge/index.js', 'utf8')
 const build = source.match(/const EDGE_BUILD = '([^']+)'/)?.[1]
 if (!assets.length || !build) throw new Error('Build assets or edge build identifier missing')
-const deadline = Date.now() + 8 * 60_000
+const deadline = Date.now() + 20 * 60_000
 let lastError
 while (Date.now() < deadline) {
   try {
