@@ -149,7 +149,7 @@ const measure = () => {
   const element = track.value
   if (!element) return
   const rect = element.getBoundingClientRect()
-  const vh = window.innerHeight
+  const vh = element.querySelector<HTMLElement>('.story-anchor')?.offsetHeight || window.innerHeight
   const index = Math.floor((-rect.top + vh * 0.5) / vh)
   active.value = Math.min(scenes.length - 1, Math.max(0, index))
   inside.value = rect.top < vh * 0.5 && rect.bottom > vh * 0.5
