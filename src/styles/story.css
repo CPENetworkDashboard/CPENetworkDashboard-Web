@@ -1,3 +1,8 @@
+@property --ah {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 160;
+}
 .story {
   --st-bg: var(--soft);
   --st-text: var(--ink);
@@ -5,11 +10,17 @@
   --st-accent: var(--accent);
   --st-line: var(--line);
   --st-card: var(--paper);
+  /* Per-chapter accent, hue animates via the registered custom property. */
+  --ac: hsl(var(--ah, 160) 72% 42%);
   --mx: 1;
   --my: 1;
   position: relative;
   background: var(--st-bg);
   color: var(--st-text);
+  transition: --ah 0.9s ease;
+}
+:root[data-theme='dark'] .story {
+  --ac: hsl(var(--ah, 160) 82% 62%);
 }
 .story.narrow {
   --mx: 0.36;
@@ -169,7 +180,7 @@
 }
 .story-eyebrow {
   margin: 0;
-  color: var(--st-accent);
+  color: var(--ac, var(--st-accent));
   font-family: var(--mono);
   font-size: 12.5px;
   letter-spacing: 0.14em;
@@ -203,7 +214,7 @@
     border-color 0.4s;
 }
 .story-steps li.on {
-  border-color: var(--st-accent);
+  border-color: var(--ac, var(--st-accent));
   opacity: 1;
 }
 .story-steps b {
@@ -526,7 +537,7 @@
   color: var(--st-text);
 }
 .story-rail button.on span {
-  color: var(--st-accent);
+  color: var(--ac, var(--st-accent));
 }
 .story-rail i {
   position: relative;
@@ -540,7 +551,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--st-accent);
+  background: var(--ac, var(--st-accent));
   transform: scaleY(var(--p));
   transform-origin: top;
 }
@@ -600,7 +611,7 @@
     height: 2px;
     margin-bottom: 4px;
     border-radius: 2px;
-    background: var(--st-accent);
+    background: var(--ac, var(--st-accent));
   }
   .story-steps li:not(.on) {
     display: none;
@@ -833,6 +844,35 @@
   visibility: visible;
   transition: opacity 0.45s ease;
 }
+/* Ambient aura behind the phone: hue follows the chapter, drifts with the
+   pointer. Decor only, so the parallax never softens rendered text. */
+.story-aura {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  z-index: 0;
+  width: min(74vw, 880px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    hsl(var(--ah, 160) 82% 56% / 0.22),
+    hsl(var(--ah, 160) 75% 52% / 0.06) 60%,
+    transparent 72%
+  );
+  filter: blur(46px);
+  opacity: 0.62;
+  pointer-events: none;
+  transform: translate(calc(-50% + var(--px, 0) * -34px), calc(-50% + var(--py, 0) * -22px));
+}
+:root:not([data-theme='dark']) .story-aura {
+  background: radial-gradient(
+    closest-side,
+    hsl(var(--ah, 160) 80% 55% / 0.16),
+    hsl(var(--ah, 160) 70% 62% / 0.05) 60%,
+    transparent 72%
+  );
+}
 .story-ring {
   position: absolute;
   left: 50%;
@@ -847,7 +887,8 @@
     inset 0 0 80px rgba(139, 199, 172, 0.06);
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, -50%) scale(calc(0.94 + var(--e, 0) * 0.1));
+  transform: translate(calc(-50% + var(--px, 0) * 18px), calc(-50% + var(--py, 0) * 12px))
+    scale(calc(0.94 + var(--e, 0) * 0.1));
   transition: opacity 0.5s ease;
 }
 .story-ring.on {

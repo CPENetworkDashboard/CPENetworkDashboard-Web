@@ -26,6 +26,8 @@ interface Chapter {
   steps: Array<[string, string]>
   /** Timeline positions where each step starts. */
   marks: number[]
+  /** Accent hue for this chapter's aura, eyebrow and rail highlight. */
+  hue: number
   duration: number
 }
 const hero = { id: 'story-top', duration: 7200 }
@@ -34,6 +36,7 @@ const chapters: Chapter[] = [
     id: 'story-connect',
     name: '连接',
     eyebrow: '01 连接',
+    hue: 160,
     lines: ['信号好不好，', '一眼就知道。'],
     steps: [
       ['连接概览', '运营商、制式和连接状态集中在第一张卡片。'],
@@ -47,6 +50,7 @@ const chapters: Chapter[] = [
     id: 'story-lock',
     name: '锁频',
     eyebrow: '02 锁频',
+    hue: 214,
     lines: ['换一个频段，', '结果当场验证。'],
     steps: [
       ['选择频段', '按设备能力列出可锁的 NR 与 LTE 频段。'],
@@ -60,6 +64,7 @@ const chapters: Chapter[] = [
     id: 'story-test',
     name: '测试',
     eyebrow: '03 测试',
+    hue: 190,
     lines: ['信号还是外网，', '测一下就清楚。'],
     steps: [
       ['多线程测速', '直接在手机上测速，实时、平均与峰值速率都有记录。'],
@@ -73,6 +78,7 @@ const chapters: Chapter[] = [
     id: 'story-tools',
     name: '工具',
     eyebrow: '04 工具',
+    hue: 266,
     lines: ['不只看信号，', '排查也在手边。'],
     steps: [
       ['Wi-Fi 信道分析', '2.4 / 5 / 6 GHz 周边热点和信道占用一屏看完。'],
@@ -86,6 +92,7 @@ const chapters: Chapter[] = [
     id: 'story-style',
     name: '个性化',
     eyebrow: '05 个性化',
+    hue: 322,
     lines: ['界面的质感，', '按你的习惯调。'],
     steps: [
       ['液态玻璃底栏', '折射、模糊与高光随手机倾斜变化；也可换成悬浮底栏或 MIUIX。'],
@@ -99,6 +106,7 @@ const chapters: Chapter[] = [
     id: 'story-platforms',
     name: '多平台',
     eyebrow: '06 多平台',
+    hue: 138,
     lines: ['手机现场调，', '电脑长时间看。'],
     steps: [
       ['手机与电脑', 'Android 现场调试，macOS 与 Windows 长时间观察。'],
@@ -206,6 +214,33 @@ const styleWall = computed(() =>
 const platformSlide = computed(() => (active.value === 6 ? ease(span(tFor(6), 0.04, 0.4)) : 0))
 const platformWipe = computed(() => (active.value === 6 ? ease(span(tFor(6), 0.56, 0.9)) : 0))
 
+// Per-chapter accent hue drives the ambient aura, eyebrow and rail highlight.
+const auraHue = computed(() => (active.value === 0 ? 160 : chapters[active.value - 1]!.hue))
+
+// Pointer parallax on decor only (aura + ring): text layers stay flat and crisp.
+const px = ref(0)
+const py = ref(0)
+let pxT = 0
+let pyT = 0
+let pFrame = 0
+const lerpPointer = () => {
+  px.value += (pxT - px.value) * 0.09
+  py.value += (pyT - py.value) * 0.09
+  if (Math.abs(pxT - px.value) > 0.0008 || Math.abs(pyT - py.value) > 0.0008) {
+    pFrame = requestAnimationFrame(lerpPointer)
+  } else {
+    px.value = pxT
+    py.value = pyT
+    pFrame = 0
+  }
+}
+const onPointer = (e: PointerEvent) => {
+  if (e.pointerType !== 'mouse') return
+  pxT = (e.clientX / window.innerWidth - 0.5) * 2
+  pyT = (e.clientY / window.innerHeight - 0.5) * 2
+  if (!pFrame) pFrame = requestAnimationFrame(lerpPointer)
+}
+
 let scrollFrame = 0
 const measure = () => {
   scrollFrame = 0
@@ -260,18 +295,22 @@ onMounted(() => {
   play(260)
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onScroll, { passive: true })
+  if (!reduce && window.matchMedia('(pointer: fine)').matches)
+    window.addEventListener('pointermove', onPointer, { passive: true })
 })
 onUnmounted(() => {
   query?.removeEventListener('change', onQuery)
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onScroll)
+  window.removeEventListener('pointermove', onPointer)
   if (frame) cancelAnimationFrame(frame)
   if (scrollFrame) cancelAnimationFrame(scrollFrame)
+  if (pFrame) cancelAnimationFrame(pFrame)
 })
 </script>
 
 <template>
-  <div class="story" :class="{ narrow }">
+  <div class="story" :class="{ narrow }" :style="{ '--ah': auraHue, '--px': px, '--py': py }">
     <nav class="story-rail" :class="{ show: rail >= 0 }" aria-label="功能章节">
       <button
         v-for="(chapter, index) in chapters"
@@ -341,6 +380,7 @@ onUnmounted(() => {
           </header>
         </div>
         <div class="story-stagebox">
+          <i class="story-aura" aria-hidden="true"></i>
           <i
             class="story-ring"
             :class="{ on: active === 0 }"

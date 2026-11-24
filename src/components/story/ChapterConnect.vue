@@ -10,7 +10,7 @@ const step = computed(() => (t.value < 0.22 ? 0 : t.value < 0.58 ? 1 : 2))
 const fill = computed(() => ease(span(t.value, 0.06, 0.46)))
 const radio = computed(() => radioAt(fill.value))
 const power = computed(() => powerAt(ease(span(t.value, 0.16, 0.5))))
-const lift = computed(() => pop(span(t.value, 0.56, 0.74)))
+const lift = computed(() => pop(span(t.value, 0.56, 0.74)) * (1 - ease(span(t.value, 0.84, 0.96))))
 const grades = computed(() => pop(span(t.value, 0.7, 0.86)))
 </script>
 
@@ -19,7 +19,7 @@ const grades = computed(() => pop(span(t.value, 0.7, 0.86)))
     :radio
     :power
     :fill
-    :focus="step === 0 ? 'cell' : step === 2 ? 'radio' : null"
+    :focus="step === 0 ? 'cell' : step === 2 && t < 0.84 ? 'radio' : null"
     :pop="lift"
     :grades
   />

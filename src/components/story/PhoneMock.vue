@@ -109,7 +109,7 @@ const lensAt = computed(() => props.lens ?? dock.findIndex(([id]) => id === prop
           name
         }}</span>
       </nav>
-      <div class="pm-body"><slot /></div>
+      <div :key="`${page}|${title}`" class="pm-body"><slot /></div>
       <div class="pm-dock pm-layer" style="--z: 5.6; --fy: 66px">
         <span v-if="explode > 0.01" class="pm-tag left" style="--tz: 5.6"
           ><b>液态玻璃底栏</b><i></i
